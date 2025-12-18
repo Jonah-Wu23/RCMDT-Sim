@@ -90,6 +90,7 @@
 - **实现方案**：
   - **数据清洗**：`clean_kmb_links.py` 从连续的 `station_eta` 记录中推导站间 `(seq_i -> seq_i+1)` 的出发/到达时间，结合静态站间距离 `kmb_route_stop_dist.csv` 计算路段均速。异常剔除策略：`dt > 10s` 且 `2 < v < 100 km/h`。
   - **特征工程**：`merge_features.py` 使用 `pd.merge_asof` 将 HKO（气温/降雨）、STN（交通事件数）、JTI（主干道平均行车时间）按时间戳对齐合并到路段记录。
+    - *Update*: 修复了 JTI XML 命名空间问题（`JOURNEY_DATA` vs `JOURNEY_TIME`），成功提取出宏观拥堵指数。
   - **指标计算**：`compare_link_metrics.py` 计算 Real vs Sim 的 L2 级核心指标：
     - **分布统计**：P10/P50/P90 分位速度、均值、标准差。
     - **距离度量**：Wasserstein Distance (EMD) 和 KS 统计量。
@@ -99,9 +100,10 @@
   - `python scripts/compare_link_metrics.py`
 - **输出结果**：
   - 原始记录：`data/processed/link_times.csv` (每车每路段), `link_speeds.csv` (同上)。
-  - 增强数据：`data/processed/enriched_link_stats.csv` (含 Temp, Rain, Incidents)。
+  - 增强数据：`data/processed/enriched_link_stats.csv` (含 Temp, Rain, Incidents, JTI Avg Time)。
   - 评价指标：`data/processed/link_metrics_overall.csv` (EMD, KS, Real/Sim Stats)。
 - **观察/结论（Initial Insights）**：
+  - **特征完整度**：天气（Temp: ~23.6C）、降雨、STN 事件（常值 1）、JTI（~13.1 min）均已成功合并。
   - **仿真未校准**：Link 1-2 真实均速 3.44 km/h，仿真均速 78.64 km/h (EMD=75.19)，表明仿真处于完全自由流状态，极度缺乏拥堵机制。
   - **长直路段准确**：Link 15-16 (高速段) 真实 57.4 km/h vs 仿真 60.6 km/h，EMD 仅 3.2，证明车辆动力学参数基本正确，误差源于交通流缺失。
   - **数据覆盖**：因真实数据清洗过滤，部分拥堵路段无有效速度记录，已修复脚本以静态距离表为基准，确保仿真侧指标计算完整。

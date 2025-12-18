@@ -58,7 +58,11 @@ def load_stn_data(stn_dir):
 def load_jti_data(jti_dir):
     data = []
     files = glob.glob(os.path.join(jti_dir, "*.xml"))
+    # Namespace handling is tricky with ElementTree if not exact.
+    # The sample shows xmlns="http://data.one.gov.hk/td".
+    # We can skip namespace by searching for local tags or using the full URI.
     ns = {'ns': 'http://data.one.gov.hk/td'}
+    
     for f in files:
         ts = parse_filename_ts(f)
         if not ts: continue
@@ -66,10 +70,24 @@ def load_jti_data(jti_dir):
             tree = ET.parse(f)
             root = tree.getroot()
             jts = []
-            for item in root.findall('ns:jtis_journey_time', ns):
-                jt = item.find('ns:JOURNEY_TIME', ns)
-                if jt is not None and jt.text:
-                    jts.append(float(jt.text))
+            
+            # Find all jtis_journey_time elements. 
+            # Try with namespace first, then without if empty (fallback).
+            items = root.findall('ns:jtis_journey_time', ns)
+            if not items:
+                items = root.findall('jtis_journey_time')
+                
+            for item in items:
+                # The sample shows <JOURNEY_DATA>11</JOURNEY_DATA>
+                # It is NOT JOURNEY_TIME, it is JOURNEY_DATA.
+                
+                # Check for JOURNEY_DATA
+                jd = item.find('ns:JOURNEY_DATA', ns)
+                if jd is None:
+                    jd = item.find('JOURNEY_DATA')
+                    
+                if jd is not None and jd.text and jd.text.isdigit():
+                    jts.append(float(jd.text))
             
             avg_jti = sum(jts) / len(jts) if jts else None
             data.append({'timestamp': ts, 'avg_journey_time': avg_jti})
