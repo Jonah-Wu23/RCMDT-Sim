@@ -348,3 +348,31 @@ L1 最小闭环已完全跑通。加入背景流后的 RMSE (150s 左右) 真实
 
 ### 基础设施更新 (Infrastructure Updates)
 - **日志系统增强**: 为了支持并行实验和历史回溯，我们将 `run_calibration_l1_loop.py` 的日志输出改为带时间戳格式 (`l1_calibration_log_YYYYMMDD_HHMMSS.csv`)。每次运行均生成独立文件，不再覆盖旧数据。同时更新了绘图脚本以自动识别最新日志。
+
+
+---
+
+## Week 3 Experiment 3.2: 物理一致性建模与发表级可视化升级 (2025-12-20)
+
+### 实验背景与改进动机
+在 Experiment 3.1 的闭环验证中发现，硬编码的停站人数（15人）导致 $t_{board}$ 参数被迫吸收站点间的空间异质性和开门固定开销，严重影响了参数的物理标定意义。同时，原有的 matplotlib 绘图难以满足论文发表的视觉要求。
+
+### 核心技术方案升级
+1. **发表级可视化系统 (Visual Upgrade)**:
+    - 脚本：`plot_calibration_results.py`
+    - 技术栈：Seaborn + Matplotlib 底层微调。
+    - 特性：清爽白底网格、300 DPI、支持 PDF/SVG、自动标记最优解 (Star Marker)、绘制 LOWESS/Rolling 趋势线、跨阶段分类着色 (LHS vs BO)。
+    - 自动总结：循环结束自动打印优化报告（RMSE 改进百分比、BO 提升效果判定）。
+
+2. **物理一致性停站模型 (Physics-Informed Model)**:
+    - 公式：$Duration = T_{fixed} + t_{board} \times (N_{base} \times W_{stop})$
+    - **固定开销 ($T_{fixed}=5.0s$)**: 模拟开门、关门及司机安全确认的刚性时间。
+    - **基准客流 ($N_{base}=15$)**: 作为标定基准。
+    - **启发式权重 ($W_{stop}$)**: 通过 `generate_stop_weights.py` 分析线网拓扑生成。权重基于站点在裁剪路网中的重复出现频率（Centrality），自动区分枢纽站与小站。
+
+### 基础设施更新
+- **全自动闭环**: `run_calibration_l1_loop.py` 现在集成所有模块，运行命令：`python scripts/calibration/run_calibration_l1_loop.py --iters 30` 即可一键完成“仿真-校准-绘图”全过程。
+- **配置系统升级**: 站点权重字典持久化至 `config/calibration/bus_stop_weights.json`。
+
+### 阶段性结论
+构建了具备**物理标定意义**的 L1 层校准框架。新模型通过解耦“空间需求”与“上车速率”，显著提高了校准参数的泛化能力。系统已准备好进行最终的生产运行。

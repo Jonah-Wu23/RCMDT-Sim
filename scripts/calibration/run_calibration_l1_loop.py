@@ -58,34 +58,48 @@ class L1CalibrationLoop:
     def update_route_xml(self, params_dict: Dict[str, float]):
         """
         生成包含最新校准参数的路由文件。
-        包括修改 vType (跟驰/变道参数) 和动态计算停站 duration。
+        采用 Physics-Informed Model: Dwell = T_fixed + t_board * (N_base * W_stop)
         """
         import xml.etree.ElementTree as ET
         
+        # 加载站点权重字典
+        weights_path = os.path.join(self.root, 'config/calibration/bus_stop_weights.json')
+        if os.path.exists(weights_path):
+            with open(weights_path, 'r', encoding='utf-8') as f:
+                stop_weights = json.load(f)
+        else:
+            print(f"[WARN] Stop weights file not found, falling back to uniform weights.")
+            stop_weights = {}
+
         if not os.path.exists(self.base_route):
             raise FileNotFoundError(f"Base route file not found: {self.base_route}")
             
         tree = ET.parse(self.base_route)
         root = tree.getroot()
         
-        # 1. 更新 vType 参数
+        # 1. 更新 vType 参数 (Krauss 核心模型)
         for vtype in root.iter('vType'):
             if vtype.get('id') == 'kmb_double_decker':
-                # Krauss 核心模型参数
                 if 'accel' in params_dict: vtype.set('accel', f"{params_dict['accel']:.2f}")
                 if 'decel' in params_dict: vtype.set('decel', f"{params_dict['decel']:.2f}")
                 if 'sigma' in params_dict: vtype.set('sigma', f"{params_dict['sigma']:.2f}")
                 if 'tau' in params_dict: vtype.set('tau', f"{params_dict['tau']:.2f}")
                 if 'minGap' in params_dict: vtype.set('minGap', f"{params_dict['minGap']:.2f}")
         
-        # 2. 更新停站 duration (J1 校准核心：t_board * passengers)
-        # TODO: 优化硬编码的乘客数逻辑
-        passengers = 15 
+        # 2. 更新停站 duration (物理一致性建模)
+        # T_fixed: 固定开销 (开门/起步/安全确认)
+        # N_base: 基准客流 (15人)
+        T_fixed = 5.0 
+        N_base = 15.0
         t_board = params_dict.get('t_board', 2.0)
         
         for stop in root.iter('stop'):
-            if 'busStop' in stop.attrib:
-                duration = t_board * passengers
+            stop_id = stop.get('busStop')
+            if stop_id:
+                # 获取该站的启发式客流权重, 默认为 1.0
+                w_stop = stop_weights.get(stop_id, {}).get('weight', 1.0)
+                # 核心公式
+                duration = T_fixed + t_board * (N_base * w_stop)
                 stop.set('duration', f"{duration:.2f}")
         
         tree.write(self.calib_route, encoding='utf-8', xml_declaration=True)

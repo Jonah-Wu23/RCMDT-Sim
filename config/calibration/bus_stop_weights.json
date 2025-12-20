@@ -1,0 +1,212 @@
+{
+    "EC19750840FFEDDC": {
+        "weight": 1.909,
+        "raw_count": 12,
+        "is_hub": true
+    },
+    "B76B249D3D253008": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "A7F35DC09E1A1528": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "D242B538BA760551": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "11ED493F674F4888": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "BA765A2BCCE21F5C": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "BE510511B0A7344E": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "BE1A19A3705F5B70": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "95731C2B3563CF5E": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "4AFCFC726ADBD5F7": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "DD9DF46F3BA040EE": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "B7C0A83790F94D99": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "06566A7FE3C6466A": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "7DD772B7D55C54B2": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "50E78EB09845863E": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "09A156B1A802D093": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "BD34A7B702373B12": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "E30C2815DA280036": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "C06334CA2AF7814B": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "812E72C257C94B73": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "18C138014DF5B0C8": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "0FDE3A87457539BC": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "30B08A7B2B2B623F": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "7ADC6D521E6BECE6": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "E02E10C9135624F9": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "145515B1D2C60CAF": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "ADC51A7EEEE43D6F": {
+        "weight": 1.909,
+        "raw_count": 12,
+        "is_hub": true
+    },
+    "C3D2F84C0F0FF415": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "6F9CEABEE36E8682": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "A63B90588F747496": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "83B717529F9794BC": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "1D8A902219897402": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "A81B13297DB1C481": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "13E0A0449C73F4DE": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "AD97EA183A25102C": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "72F743E4D464E498": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "25D811895B82ABCA": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "709C8604AFB90F27": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "8379C4B1265C27F7": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "C804CCACB2781EEE": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "AD1B202B678A3B56": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    },
+    "B30799FB3732222B": {
+        "weight": 0.955,
+        "raw_count": 6,
+        "is_hub": false
+    }
+}
