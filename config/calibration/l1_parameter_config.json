@@ -1,0 +1,51 @@
+{
+    "parameters": [
+        {
+            "name": "t_board",
+            "type": "float",
+            "min": 0.5,
+            "max": 5.0,
+            "description": "单乘客上车时间 (s) - 核心校准项，影响停站时长"
+        },
+        {
+            "name": "tau",
+            "type": "float",
+            "min": 0.1,
+            "max": 2.0,
+            "description": "驾驶员反应时间 (s) - Krauss 跟驰模型参数"
+        },
+        {
+            "name": "sigma",
+            "type": "float",
+            "min": 0.1,
+            "max": 0.8,
+            "description": "驾驶不完美度 (0-1) - 模拟随机减速行为"
+        },
+        {
+            "name": "minGap",
+            "type": "float",
+            "min": 0.1,
+            "max": 5.0,
+            "description": "最小跟车/停车间距 (m) - 影响排队密度"
+        },
+        {
+            "name": "accel",
+            "type": "float",
+            "min": 0.5,
+            "max": 3.0,
+            "description": "最大加速度 (m/s^2) - 影响起步性能"
+        },
+        {
+            "name": "decel",
+            "type": "float",
+            "min": 1.0,
+            "max": 5.0,
+            "description": "最大减速度 (m/s^2) - 影响制动性能"
+        }
+    ],
+    "sampling": {
+        "method": "LHS",
+        "initial_sample_size": 20,
+        "seed": 42
+    }
+}

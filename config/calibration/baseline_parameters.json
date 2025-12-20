@@ -1,0 +1,35 @@
+{
+    "experiment_id": "Experiment 2.3",
+    "description": "裁剪路网后的基线参数设定（未优化状态）",
+    "timestamp": "2025-12-20T19:33:00",
+    "micro_parameters": {
+        "kmb_double_decker": {
+            "sigma": 0.5,
+            "tau": 1.0,
+            "minGap": 2.5,
+            "maxSpeed": 20.0,
+            "accel": 2.6,
+            "decel": 4.5,
+            "length": 12.0
+        },
+        "private_car": {
+            "sigma": 0.5,
+            "tau": 1.0,
+            "minGap": 2.5,
+            "maxSpeed": 13.89,
+            "accel": 2.6,
+            "decel": 4.5,
+            "length": 5.0
+        }
+    },
+    "dwell_time_model": {
+        "type": "LogNormal_Fixed",
+        "mean_s": 117.7,
+        "std_s": 67.2,
+        "source": "ETA_Data_Driven"
+    },
+    "network": {
+        "file": "hk_cropped.net.xml",
+        "size_mb": 38
+    }
+}

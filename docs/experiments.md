@@ -299,3 +299,52 @@
     - **数据闭环**: 实现了仿真与现实在微观时序上的“同起同终”，斜率对比（速度）变得极度直观。
     - **基准统一**: 所有的后续校准（Week 3）将严格基于这套评估脚本。只要曲线在图中拟合，即代表校准成功。
     - **稳定性**: 修复了 `mcolors`, `numpy`, `real_links` 等多处 `NameError`，确保自动化脚本可稳健运行。
+
+---
+
+## Week 3 Experiment 3.0: L1 微观参数定义与空间构建 (2025-12-20)
+- **目标**: 筛选 L1 层核心校准参数，定义物理搜索空间，并生成初始样本集以启动贝叶斯优化。
+- **参数筛选 ($\theta_{L1}$)**:
+    - `t_board`: 单乘客上车耗时 [0.5, 5.0] s (核心停站参数)。
+    - `tau`: 驾驶员反应时间 [0.1, 2.0] s (Krauss 模型)。
+    - `sigma`: 驾驶不完美度 [0.1, 0.8] (随机减速强度)。
+    - `minGap`: 最小跟车间距 [0.1, 5.0] m (排队密度)。
+    - `accel`: 最大加速度 [0.5, 3.0] m/s² (动力性能)。
+    - `decel`: 最大减速度 [1.0, 5.0] m/s² (制动性能)。
+- **操作与产出**:
+    - **配置文件**: [l1_parameter_config.json](file:///d:/Documents/Bus%20Project/Sorce%20code/config/calibration/l1_parameter_config.json)
+    - **采样脚本**: [generate_l1_samples.py](file:///d:/Documents/Bus%20Project/Sorce%20code/scripts/calibration/generate_l1_samples.py)
+    - **初始样本**: 使用拉丁超立方采样 (LHS) 生成 20 组初始参数，保存至 [l1_initial_samples.csv](file:///d:/Documents/Bus%20Project/Sorce%20code/data/calibration/l1_initial_samples.csv)。
+- **基线快照**: 记录了 Experiment 2.3 的全部默认参数至 [baseline_parameters.json](file:///d:/Documents/Bus%20Project/Sorce%20code/config/calibration/baseline_parameters.json)，作为后续优化的原始对照。
+- **结论**: 确立了 6 维校准空间，初始样本分布均匀，为后续 MVC 代理模型训练准备好了冷启动数据。
+
+---
+
+## Week 3 Experiment 3.1: L1 微观参数校准闭环验证 (2025-12-20)
+
+### 实验目标
+实现并验证 L1 层（微观驾驶行为与停站）的校准闭环。确保从“参数采样 -> XML 注入 -> SUMO 仿真 -> RMSE 计算 -> 代理模型更新”的全流程自动化，并在真实背景流量环境下运行。
+
+### 关键修复点 (Lessons Learned)
+1. **仿真环境真实性修复**：
+    - **问题**：初始运行仅需 1 秒，仿真处于“真空”状态。
+    - **修复**：在 `run_simulation` 命令中重新加入了 `background_cropped.rou.xml`。
+    - **结论**：虽然仿真时长从 <1s 增加到约 230s (RTF ~15)，但车辆总数从 24 辆恢复到 13 万辆，RMSE 计算才具有物理意义。
+2. **参数冲突处理**：
+    - **问题**：`vType` 定义在路由文件和追加文件中冲突。
+    - **修复**：取消独立的 `vType` 追加文件，改为直接解析并修改 `.rou.xml` 模板中的 `vType` 属性。
+3. **路由模板对齐**：
+    - **修复**：将基础模板从 `baseline_irn_duarouter.rou.xml` 切换为专门为裁剪路网修复过的 `fixed_routes_cropped.rou.xml`。
+
+### 实验数据记录
+- **仿真配置**: `hk_cropped.net.xml`, `background_cropped.rou.xml`
+- **采样策略**: 20 次初始 LHS + N 次 BO (本次验证运行了 2 次 BO)
+- **初步指标**:
+    - **Iteration 1**: RMSE = 174.2s (RTF 15.6)
+    - **Iteration 2**: RMSE = 149.0s (RTF 18.1)
+
+### 阶段性结论
+L1 最小闭环已完全跑通。加入背景流后的 RMSE (150s 左右) 真实反映了 68X 路线在晚高峰期间的运行偏差。框架已准备好进行大规模参数优化搜索。
+
+### 基础设施更新 (Infrastructure Updates)
+- **日志系统增强**: 为了支持并行实验和历史回溯，我们将 `run_calibration_l1_loop.py` 的日志输出改为带时间戳格式 (`l1_calibration_log_YYYYMMDD_HHMMSS.csv`)。每次运行均生成独立文件，不再覆盖旧数据。同时更新了绘图脚本以自动识别最新日志。
