@@ -230,8 +230,7 @@ def plot_robustness_cdf(real_csv_raw, real_csv_clean, sim_xml, dist_file, output
     plot_cdf(sim_speeds, '#ff7f0e', '--', 'Sim (Zero-Shot)')
     
     ax.set_xlabel('Speed (km/h)')
-    ax.set_ylabel('CDF')
-    ax.set_title('Robustness Verification (P14)', fontweight='bold')
+    ax.set_ylabel('Cumulative probability')
     ax.grid(True, linestyle='--', alpha=0.3)
     ax.legend(loc='lower right')
     
@@ -240,7 +239,11 @@ def plot_robustness_cdf(real_csv_raw, real_csv_clean, sim_xml, dist_file, output
     ks_raw, _ = ks_2samp(raw_speeds, sim_speeds)
     ks_clean, _ = ks_2samp(clean_speeds, sim_speeds)
     
-    text = f"Raw KS: {ks_raw:.2f} (Fail)\nClean KS (Rule C): {ks_clean:.4f} (Pass)\nWorst 15-min: KS=0.3337"
+    text = (
+        f"KS(raw)={ks_raw:.2f}\n"
+        f"KS(clean)={ks_clean:.4f}\n"
+        "Worst 15-min window: KS=0.3337"
+    )
     # Move text to bottom right (above legend) to avoid Raw curve overlap in top-left
     # User requested shift to upper-right relative to previous (0.40, 0.20)
     ax.text(0.50, 0.35, text, transform=ax.transAxes, fontsize=7, 

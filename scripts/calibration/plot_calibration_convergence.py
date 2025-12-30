@@ -191,6 +191,14 @@ def plot_phase_comparison(df, output_dir):
                    palette=palette, legend=False)
         sns.stripplot(x='Phase', y=metric, data=plot_df, ax=ax,
                      color='black', alpha=0.5, size=5, zorder=3)
+
+        counts = plot_df['Phase'].value_counts()
+        ymax = plot_df[metric].max()
+        y_text = ymax * 1.05 if ymax > 0 else 1.0
+        for tick, label in zip(ax.get_xticks(), ax.get_xticklabels()):
+            phase = label.get_text()
+            n = counts.get(phase, 0)
+            ax.text(tick, y_text, f"n={n}", ha='center', va='bottom', fontsize=7)
         
         ax.set_ylabel('RMSE (seconds)')
         ax.set_xlabel('')

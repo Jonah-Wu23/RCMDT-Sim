@@ -34,23 +34,26 @@ def plot_gp_variance(df, output_path, label):
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     
     fig, ax = plt.subplots(figsize=(6, 4), dpi=300)
+
+    df = df.copy()
+    df['bo_iter'] = df['iteration'] - df['iteration'].min() + 1
     
     # Plot Max Sigma (Orange - Critical/Upper Bound)
-    sns.lineplot(data=df, x='iteration', y='sigma_max', label='Max Uncertainty', 
+    sns.lineplot(data=df, x='bo_iter', y='sigma_max', label='Max Uncertainty', 
                  color='#ff7f0e', linestyle='--', linewidth=1.5, ax=ax)
     
     # Plot Mean Sigma (Blue - Average/Main)
-    sns.lineplot(data=df, x='iteration', y='sigma_mean', label='Mean Uncertainty', 
+    sns.lineplot(data=df, x='bo_iter', y='sigma_mean', label='Mean Uncertainty', 
                  color='#1f77b4', marker='o', linewidth=2, ax=ax)
     
     # Plot Min Sigma (Grey - Lower Bound)
-    sns.lineplot(data=df, x='iteration', y='sigma_min', label='Min Uncertainty', 
+    sns.lineplot(data=df, x='bo_iter', y='sigma_min', label='Min Uncertainty', 
                  color='#7f7f7f', linestyle=':', linewidth=1.5, ax=ax)
     
     # Formatting
-    ax.set_title(f'Surrogate Model Uncertainty Reduction ({label})', fontweight='bold')
-    ax.set_xlabel('BO Iteration')
-    ax.set_ylabel('Predicted Standard Deviation (Sigma)')
+    ax.set_title('Surrogate Model Uncertainty Reduction', fontweight='bold')
+    ax.set_xlabel('BO Iteration (within experiment)')
+    ax.set_ylabel('Predicted standard deviation of travel-time objective (s)')
     ax.legend(frameon=True)
     ax.grid(True, which='both', linestyle='--', alpha=0.5)
     

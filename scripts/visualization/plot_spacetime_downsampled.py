@@ -10,6 +10,53 @@ import numpy as np
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../scripts'))
 from common_data import load_sim_data, load_route_stop_dist, build_sim_trajectory, load_real_link_speeds, get_dist_map
 
+def _build_trips_from_origin(links_df, start_seq=1, max_gap_s=900, seq_drop=3,
+                             stuck_k=5, stuck_speed_kmh=1.0, stuck_dist_m=10.0):
+    trips = []
+    current = []
+    stuck_count = 0
+    last_dep = None
+    last_from_seq = None
+
+    for row in links_df.itertuples(index=False):
+        start_new = False
+
+        if row.from_seq == start_seq:
+            start_new = True
+
+        if current:
+            if last_dep is not None:
+                gap = (row.departure_ts - last_dep).total_seconds()
+                if gap > max_gap_s:
+                    start_new = True
+
+            if last_from_seq is not None and (last_from_seq - row.from_seq) >= seq_drop:
+                start_new = True
+
+            if row.speed_kmh < stuck_speed_kmh and row.dist_m <= stuck_dist_m:
+                stuck_count += 1
+            else:
+                stuck_count = 0
+
+            if stuck_count >= stuck_k:
+                start_new = True
+                stuck_count = 0
+
+        if start_new:
+            if current:
+                trips.append(current)
+            current = [row]
+        else:
+            current.append(row)
+
+        last_dep = row.departure_ts
+        last_from_seq = row.from_seq
+
+    if current:
+        trips.append(current)
+
+    return trips
+
 def main():
     parser = argparse.ArgumentParser(description="Plot Spacetime Diagram Comparison (High Res Sim vs Downsampled Sim vs Real)")
     parser.add_argument('--real_links', required=True)
@@ -20,6 +67,11 @@ def main():
     parser.add_argument('--bound', default=None)
     parser.add_argument('--downsample_interval_s', type=int, default=30, help="Downsample interval in seconds")
     parser.add_argument('--t_critical', type=float, default=325, help="Ghost filter threshold for Real Data (Rule C)")
+    parser.add_argument('--sample_n', type=int, default=50, help="Number of trips/vehicles to sample for plotting")
+    parser.add_argument('--corridor_m', type=float, default=5000, help="Spatial corridor length in meters")
+    parser.add_argument('--seed', type=int, default=7, help="Random seed for sampling")
+    parser.add_argument('--mode', choices=['single_trip', 'multi'], default='single_trip',
+                        help="single_trip for N=1 sampling-rate sanity check, multi for trajectory texture comparison")
     args = parser.parse_args()
 
     # IEEE Style Configuration (matching plot_calibration_convergence.py)
@@ -132,6 +184,26 @@ def main():
         df_sim_low = df_sim_high[df_sim_high['time_rel'] % args.downsample_interval_s == 0].copy()
     else:
         df_sim_low = pd.DataFrame()
+
+    corridor_max_m = args.corridor_m
+    if not df_sim_high.empty:
+        df_sim_high = df_sim_high[(df_sim_high['dist'] >= 0) & (df_sim_high['dist'] <= corridor_max_m)]
+    if not df_sim_low.empty:
+        df_sim_low = df_sim_low[(df_sim_low['dist'] >= 0) & (df_sim_low['dist'] <= corridor_max_m)]
+
+    rng = np.random.default_rng(args.seed)
+    sim_vehicle_ids = df_sim_high['vehicle_id'].unique().tolist()
+
+    if args.mode == 'single_trip' and sim_vehicle_ids:
+        sim_durations = df_sim_high.groupby('vehicle_id')['time_rel'].max()
+        median_dur = sim_durations.median()
+        sim_keep = sim_durations.sub(median_dur).abs().idxmin()
+        df_sim_high = df_sim_high[df_sim_high['vehicle_id'] == sim_keep]
+        df_sim_low = df_sim_low[df_sim_low['vehicle_id'] == sim_keep]
+    elif args.sample_n > 0 and len(sim_vehicle_ids) > args.sample_n:
+        sim_keep = rng.choice(sim_vehicle_ids, size=args.sample_n, replace=False).tolist()
+        df_sim_high = df_sim_high[df_sim_high['vehicle_id'].isin(sim_keep)]
+        df_sim_low = df_sim_low[df_sim_low['vehicle_id'].isin(sim_keep)]
         
     # --- 4. Load & Reconstruct Real Trips ---
     real_links = load_real_link_speeds(args.real_links)
@@ -177,38 +249,33 @@ def main():
     #   Sort by departure_ts.
     #   If (to_seq == next_from_seq) and (next_dep approx arr), it's same trip.
     
-    clean_links['ts'] = pd.to_datetime(clean_links['departure_ts'])
-    if clean_links['ts'].dt.tz is None: clean_links['ts'] = clean_links['ts'].dt.tz_localize('UTC').dt.tz_convert('Asia/Hong_Kong')
-    
-    clean_links = clean_links.sort_values(['ts', 'from_seq'])
-    
-    trips = []
-    current_trip = []
-    
-    # Naive chaining
-    for _, row in clean_links.iterrows():
-        if not current_trip:
-            current_trip.append(row)
-            continue
-            
-        last = current_trip[-1]
-        # Check connectivity
-        # seq connectivity
-        seq_gap = row['from_seq'] - last['to_seq']
-        # time connectivity (allow 5 min dwell/gap)
-        time_gap = (row['ts'] - pd.to_datetime(last['arrival_ts']).tz_convert('Asia/Hong_Kong')).total_seconds()
-        
-        if seq_gap == 0 and 0 <= time_gap < 300:
-            current_trip.append(row)
-        else:
-            trips.append(current_trip)
-            current_trip = [row]
-    if current_trip: trips.append(current_trip)
-    
+    clean_links['departure_ts'] = pd.to_datetime(clean_links['departure_ts'], errors='coerce')
+    clean_links['arrival_ts'] = pd.to_datetime(clean_links['arrival_ts'], errors='coerce')
+    clean_links = clean_links.dropna(subset=['departure_ts', 'arrival_ts'])
+
+    if clean_links['departure_ts'].dt.tz is None:
+        clean_links['departure_ts'] = clean_links['departure_ts'].dt.tz_localize('UTC').dt.tz_convert('Asia/Hong_Kong')
+        clean_links['arrival_ts'] = clean_links['arrival_ts'].dt.tz_localize('UTC').dt.tz_convert('Asia/Hong_Kong')
+    else:
+        clean_links['departure_ts'] = clean_links['departure_ts'].dt.tz_convert('Asia/Hong_Kong')
+        clean_links['arrival_ts'] = clean_links['arrival_ts'].dt.tz_convert('Asia/Hong_Kong')
+
+    clean_links = clean_links.sort_values(['departure_ts', 'from_seq'])
+    trips = _build_trips_from_origin(clean_links, start_seq=start_seq)
+
     real_plot_segments = []
-    
+    all_trip_segments = []
+
+    sorted_seqs = sorted([s for s in dist_df['seq'] if s >= start_seq])
+    corridor_seqs = [
+        s for s in sorted_seqs
+        if dist_map.get(s, start_dist_abs) - start_dist_abs <= corridor_max_m
+    ]
+    total_seq_count = max(len(corridor_seqs), 1)
+    min_coverage = 0.6
+    min_dist_m = 3000
+
     for trip in trips:
-        # Convert trip to DataFrame
         df_trip = pd.DataFrame(trip)
         
         # Check if trip covers start_seq
@@ -225,7 +292,7 @@ def main():
         start_row = df_trip[df_trip['from_seq'] == start_seq]
         
         if not start_row.empty:
-            t0 = start_row.iloc[0]['ts']
+            t0 = start_row.iloc[0]['departure_ts']
         else:
             # Trip doesn't contain start_seq link?
             # Maybe it started later? Or data missing?
@@ -233,6 +300,9 @@ def main():
             # If we only keep trips that pass through start_seq:
             continue
             
+        trip_segments = []
+        covered = set()
+        last_dist = -np.inf
         for _, row in df_trip.iterrows():
             u, v = row['from_seq'], row['to_seq']
             d_u = dist_map.get(u)
@@ -243,26 +313,77 @@ def main():
             d_v_rel = d_v - start_dist_abs
             
             # Crop Spatial
-            if d_u_rel > max_sim_dist + 500: continue
+            if d_u_rel > corridor_max_m:
+                break
             
-            t_dep_rel = (row['ts'] - t0).total_seconds()
+            t_dep_rel = (row['departure_ts'] - t0).total_seconds()
             t_arr_rel = t_dep_rel + row['travel_time_s']
-            
-            real_plot_segments.append({
+
+            if d_u_rel < 0:
+                continue
+
+            if d_v_rel < last_dist:
+                continue
+            last_dist = d_v_rel
+            covered.add(u)
+
+            if d_v_rel > corridor_max_m and d_v_rel > d_u_rel:
+                ratio = (corridor_max_m - d_u_rel) / (d_v_rel - d_u_rel)
+                t_arr_rel = t_dep_rel + ratio * (t_arr_rel - t_dep_rel)
+                d_v_rel = corridor_max_m
+                trip_segments.append({
+                    'x0': t_dep_rel, 'x1': t_arr_rel,
+                    'y0': d_u_rel, 'y1': d_v_rel
+                })
+                break
+
+            trip_segments.append({
                 'x0': t_dep_rel, 'x1': t_arr_rel,
                 'y0': d_u_rel, 'y1': d_v_rel
             })
-            
-    print(f"Reconstructed {len(real_plot_segments)} Clean Real Segments aligned to start_seq {start_seq}")
+
+        if trip_segments:
+            all_trip_segments.append(trip_segments)
+            coverage_ratio = len(covered) / total_seq_count
+            last_dist = max(seg['y1'] for seg in trip_segments)
+            if coverage_ratio < min_coverage and last_dist < min_dist_m:
+                continue
+            real_plot_segments.append(trip_segments)
+
+    if not real_plot_segments and all_trip_segments:
+        print("No trips met coverage threshold; falling back to all aligned trips.")
+        real_plot_segments = all_trip_segments
+
+    if not real_plot_segments:
+        print(f"No clean real trips aligned to start_seq {start_seq}.")
+    else:
+        print(f"Reconstructed {len(real_plot_segments)} clean real trips aligned to start_seq {start_seq}")
+
+    if args.mode == 'single_trip' and real_plot_segments:
+        trip_durations = [max(seg['x1'] for seg in trip) for trip in real_plot_segments]
+        median_dur = np.median(trip_durations)
+        best_idx = int(np.argmin([abs(d - median_dur) for d in trip_durations]))
+        real_plot_segments = [real_plot_segments[best_idx]]
+    elif args.sample_n > 0 and len(real_plot_segments) > args.sample_n:
+        keep_idx = rng.choice(len(real_plot_segments), size=args.sample_n, replace=False)
+        real_plot_segments = [real_plot_segments[i] for i in keep_idx]
 
     # --- 5. Plotting 3-Panel (IEEE Double-Column Width: 7.16 inches) ---
     fig, axes = plt.subplots(1, 3, figsize=(7.16, 2.5), sharey=True)
     # This matches the style of B2_phase_comparison.png for consistency
     
     # Common limits
-    all_x = [s['x1'] for s in real_plot_segments] + df_sim_high['time_rel'].tolist()
+    real_x_vals = [seg['x1'] for trip in real_plot_segments for seg in trip]
+    all_x = real_x_vals + df_sim_high['time_rel'].tolist()
     maxx = np.percentile(all_x, 98) if all_x else 3000
     
+    def _panel_stats(time_vals):
+        if len(time_vals) < 2:
+            return "n/a"
+        diffs = np.diff(np.sort(time_vals))
+        median_dt = np.median(diffs)
+        return f"{median_dt:.0f}"
+
     # Panel 1: Sim High Res
     ax0 = axes[0]
     if not df_sim_high.empty:
@@ -273,8 +394,14 @@ def main():
     ax0.set_xlabel("Relative Time (s)", fontsize=8)
     ax0.set_ylabel("Relative Distance (m)", fontsize=8)
     ax0.set_xlim(0, maxx)
-    ax0.set_ylim(0, max_sim_dist + 100)
+    ax0.set_ylim(0, corridor_max_m)
     ax0.grid(True, alpha=0.4)
+
+    sim_high_times = df_sim_high['time_rel'].tolist()
+    sim_trip_count = df_sim_high['vehicle_id'].nunique()
+    ax0.text(0.98, 0.98, f"Trips={sim_trip_count}, Points={len(sim_high_times)}\nMedian Δt={_panel_stats(sim_high_times)} s",
+             transform=ax0.transAxes, ha='right', va='top', fontsize=7,
+             bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
     
     # Panel 2: Sim Downsampled
     ax1 = axes[1]
@@ -287,17 +414,38 @@ def main():
     ax1.set_xlabel("Relative Time (s)", fontsize=8)
     ax1.set_xlim(0, maxx)
     ax1.grid(True, alpha=0.4)
+
+    sim_low_times = df_sim_low['time_rel'].tolist()
+    sim_low_trip_count = df_sim_low['vehicle_id'].nunique()
+    ax1.text(0.98, 0.98, f"Trips={sim_low_trip_count}, Points={len(sim_low_times)}\nMedian Δt={_panel_stats(sim_low_times)} s",
+             transform=ax1.transAxes, ha='right', va='top', fontsize=7,
+             bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
     
     # Panel 3: Real Clean
     ax2 = axes[2]
-    # Plot segments
-    for seg in real_plot_segments:
-        ax2.plot([seg['x0'], seg['x1']], [seg['y0'], seg['y1']], color='#1f77b4', linewidth=1.5, alpha=0.9) # Dark blue, thicker
+    # Plot scatter points (single-trip sanity check)
+    real_points = []
+    for trip in real_plot_segments:
+        for seg in trip:
+            real_points.append((seg['x0'], seg['y0']))
+            real_points.append((seg['x1'], seg['y1']))
+
+    if real_points:
+        real_times = [p[0] for p in real_points]
+        real_dists = [p[1] for p in real_points]
+        ax2.scatter(real_times, real_dists, color='#1f77b4', s=10, alpha=0.8)
+    else:
+        real_times = []
         
     ax2.set_title(f"Real World (Clean)", fontsize=8)
     ax2.set_xlabel("Relative Time (s)", fontsize=8)
     ax2.set_xlim(0, maxx)
     ax2.grid(True, alpha=0.4)
+
+    real_trip_count = len(real_plot_segments)
+    ax2.text(0.98, 0.98, f"Trips={real_trip_count}, Points={len(real_points)}\nMedian Δt={_panel_stats(real_times)} s",
+             transform=ax2.transAxes, ha='right', va='top', fontsize=7,
+             bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
     
     
     # Apply tight_layout (matching B2_phase_comparison style)
