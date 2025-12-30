@@ -17,6 +17,7 @@ def main():
     parser.add_argument('--sim', required=True)
     parser.add_argument('--out', required=True)
     parser.add_argument('--route', default='68X')
+    parser.add_argument('--hour', type=int, default=None, help='Filter real data by hour (0-23)')
     args = parser.parse_args()
 
     # Unified Color Scheme
@@ -35,7 +36,6 @@ def main():
     plt.rcParams['xtick.labelsize'] = 7
     plt.rcParams['ytick.labelsize'] = 7
 
-    # 1. Load Data
     # 1. Load Data
     dist_df = load_route_stop_dist(args.real_dist)
     dist_df = dist_df[dist_df['route'] == args.route]
@@ -110,7 +110,9 @@ def main():
     if 'arrival_ts' in real_links.columns:
         if real_links['arrival_ts'].dt.tz is not None:
              real_links['arrival_ts'] = real_links['arrival_ts'].dt.tz_convert('Asia/Hong_Kong')
-        real_links = real_links[real_links['arrival_ts'].dt.hour == 17]
+        
+        if args.hour is not None:
+            real_links = real_links[real_links['arrival_ts'].dt.hour == args.hour]
 
     avg_link_times = real_links.groupby(['from_seq', 'to_seq'])['travel_time_s'].mean().to_dict()
     

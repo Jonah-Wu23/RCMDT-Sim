@@ -14,7 +14,7 @@
 | **P11** | 12/26 | V3 (Bridge) | **v1** (D2D TT) | 11 | Caliber Audit | audit.png |
 | **P12** | 12/28 | V3.1 (Routing) | v1 (D2D TT) | 11 | IES Pilot | B4_final.log |
 | **P13** | 12/30 | V3.1 (Routing) | v1 (D2D TT) | 11 | Freeze | final_eval.csv |
-| **P14** | **12/30** | **V3.1 (bg scaled)** | **v1.1 (D2D + Decont.)** | **11** | **Off-peak transfer; L2 frozen; Stress: T*=325s** | `link_stats_clean.csv` |
+| **P14** | **12/30** | **V3.1 (bg scaled)** | **v1.1 (D2D + Decont.)** | **11** | **Off-peak transfer; L2 frozen; Stress: T*=325s** | `link_stats_clean.csv`, `trajectory_*.png` |
 
 
 ## 2025-12-16（示例）

@@ -152,3 +152,4 @@ Mobility Digital Twins; Cyber-Physical Systems (CPS); Bayesian Optimization; Dat
 *   **Fig 2. Uncertainty Quantification:** Visualizing the Gaussian Process variance reduction over iterations.
 *   **Fig 3. Time-Space Diagrams:** Comparing "Real" vs "Ghost System" vs "RCMDT" congestion patterns.
 *   **Fig 4. Reliability CDFs:** Emphasize the alignment of the P90 tails (the human-centric reliability metric).
+*   **Fig 5. Trajectory Smoothness Validation (P14 Robustness):** Visualizing `trajectory_68X_offpeak_rcmdt.png` and `trajectory_960_offpeak_rcmdt.png` to demonstrate physical validity (acceleration noise) under zero-shot transfer conditions.

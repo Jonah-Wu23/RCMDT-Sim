@@ -147,17 +147,19 @@ class L1CalibrationLoop:
             # 960 的容忍阈值 (Soft Constraint with Smooth Penalty)
             THRESHOLD_960 = 350.0 
             
-            # 方案A：使用平滑二次惩罚函数替代硬约束
-            # 这保持了损失曲面的连续性和可微性，有利于GP代理模型拟合
-            violation = max(0.0, rmse_960 - THRESHOLD_960)
+            # 方案 B2 (Experiment 3.3): Priority-based Loss Function
+            # KMB 68X: Target, KMB 960: Constraint Anchor (Threshold 350s)
             
-            # 二次惩罚：alpha * violation^2
-            # alpha=0.1 意味着超过阈值 100 秒时，额外惩罚 1000
-            ALPHA = 0.1
-            penalty = ALPHA * (violation ** 2)
-            
-            # 主目标 + 平滑惩罚项
-            loss = rmse_68x + penalty
+            if rmse_960 <= THRESHOLD_960:
+                loss = rmse_68x
+                penalty = 0.0
+            else:
+                # 惩罚函数: 2000 + (Over-shoot) * 10
+                penalty = 2000.0 + (rmse_960 - THRESHOLD_960) * 10.0
+                loss = penalty # Note: The doc says loss = 2000 + ..., implied replacing rmse_68x or adding? 
+                               # Doc code block: loss = 2000 + ... 
+                               # This means when violated, loss is dominated effectively by penalty.
+                               # Let's stick to the doc exactly: "loss = 2000 + (rmse_960 - 350) * 10.0"
             
             return {
                 'rmse': loss,     # 这是 BO 看到并试图最小化的值
@@ -205,6 +207,7 @@ class L1CalibrationLoop:
             print(f"[CONFIG] 使用 RMSE 目标函数")
         
         results = []
+        optimization_logs = []  # List to store GP variance logs per iteration
         
         if warm_start_log and os.path.exists(warm_start_log):
             # --- 热启动模式：复用历史数据 ---
@@ -296,6 +299,22 @@ class L1CalibrationLoop:
             next_params = dict(zip(self.param_names, next_params_arr))
             
             print(f"  > Iter {i+1}/{total_iters} [BO]: ", end="", flush=True)
+
+            # Record GP variance statistics
+            mu, sigma = self.surrogate.predict(candidates)
+            sigma_mean = float(np.mean(sigma))
+            sigma_max = float(np.max(sigma))
+            sigma_min = float(np.min(sigma))
+            
+            opt_log_entry = {
+                "iteration": i,
+                "sigma_mean": sigma_mean,
+                "sigma_max": sigma_max,
+                "sigma_min": sigma_min,
+                "best_rmse_so_far": float(best_y_so_far)
+            }
+            optimization_logs.append(opt_log_entry)
+
             self.update_route_xml(next_params)
             sim_time = self.run_simulation()
             obj_metrics = self.get_objective()
@@ -308,6 +327,11 @@ class L1CalibrationLoop:
             print(f"RMSE={rmse:.4f} (68X={obj_metrics['rmse_68x']:.1f}, 960={obj_metrics['rmse_960']:.1f})")
             
             pd.DataFrame(results).to_csv(self.log_file, index=False)
+            
+            # Save optimization logs incrementally
+            opt_log_file = os.path.join(self.root, f'data/calibration/{self.label}_optimization_logs.json')
+            with open(opt_log_file, 'w') as f:
+                json.dump(optimization_logs, f, indent=4)
 
         print(f"\n[FINISH] Calibration complete. Log: {self.log_file}")
         return self.log_file
