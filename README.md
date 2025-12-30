@@ -1,25 +1,25 @@
 # RCMDT: Robust Calibration of Mobility Digital Twins
 **Codebase for IEEE SMC 2026 Submission**
 
-## 📌 Replication Guide (复现指南)
+## 📌 Replication Guide
 
 Use this guide to reproduce the key experimental results, specifically the **Baseline (B1)** verification and the **Zero-Shot Robustness (P14)** test.
 
-### 1. Prerequisites (环境要求)
+### 1. Prerequisites
 
 *   **OS**: Windows 10/11 (Validated) or Linux
 *   **Python**: 3.11+
 *   **SUMO**: 1.20.0 (Must be in system `PATH`)
     *   Verify with: `sumo --version`
 
-### 2. Setup (安装)
+### 2. Setup
 
 Install required Python libraries:
 ```bash
 pip install pandas numpy matplotlib seaborn scipy shapely geopandas
 ```
 
-### 3. Data Structure (数据结构)
+### 3. Data Structure
 
 *   `data/` : **Training Data** (Peak Hour 17:00-18:00) - For Calibration (L1/L2)
 *   `data2/` : **Testing Data** (Off-Peak Hour 15:00-16:00) - For Zero-Shot Validation
@@ -30,7 +30,7 @@ pip install pandas numpy matplotlib seaborn scipy shapely geopandas
 
 ---
 
-### 4. Reproduction Steps (复现步骤)
+### 4. Reproduction Steps
 
 #### Phase 1: Baseline Verification (Experiment B1)
 *Goal: Verify the physical baseline under free-flow conditions (No background traffic).*
@@ -117,7 +117,7 @@ pip install pandas numpy matplotlib seaborn scipy shapely geopandas
 
 ---
 
-### 5. Troubleshooting (常见问题)
+### 5. Troubleshooting
 
 *   **Empty Plots / No Data**:
     *   Check `sumo/output/*.xml` file sizes. If < 2KB, the simulation failed or produced no output. Check `logs/` for errors.
