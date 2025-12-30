@@ -36,6 +36,7 @@ Bus simulation; parameter inversion; multi-level calibration; Bayesian optimizat
 1. 提出 **多层次校准框架**：L1（线路/站点）+ L2（走廊/路段）闭环约束，解决公交停站与路网拥堵的耦合难题
 2. 引入 **贝叶斯代理模型 + 不确定性量化**：利用 Kriging 的高斯过程特性，同时获得预测均值（加速搜索）与预测方差（量化置信区间），克服传统 GA/PSO 无法提供置信信息的缺陷
 3. 建立 **分布鲁棒评估体系**：跨时段/跨日 + K-S/分位误差指标，验证校准结果的泛化稳定性
+4. 实施 **全流程口径审计 (Caliber Audit)**：揭示了仅基于移动速度 (Moving-only Speed) 进行宏观校准的系统性偏差，提出并验证了基于 Door-to-Door 行程时间的观测算子在恢复模型可辨识性中的关键作用。
 
 ---
 
@@ -61,12 +62,12 @@ Bus simulation; parameter inversion; multi-level calibration; Bayesian optimizat
 
 ### 3.2 Observations and Metrics
 
-- L1 观测：站点到离站时刻、站间行程时间、停站时长分布
-- L2 观测：路段速度/流量（检测器/第三方速度）
-- 损失函数：
-  - **J1(θ)**：L1 误差（RMSE + 分位/分布项）
-  - **J2(θ)**：L2 误差（RMSE + 分布项）
-  - 总目标：**min J = w1·J1 + w2·J2**（权重可用归一化/经验/敏感性）
+- **3.2.1 Caliber Definitions (Observation Operators)**
+  - **Op-L2-v0 (Moving-only)**: $v = L / t_{drive}$。忽略停站与排队，导致仿真“看起来总比现实快”（机理缺失假象）。
+  - **Op-L2-v1 (Door-to-Door)**: $v = L / (t_{drive} + t_{dwell} + t_{wait})$。本文主实验采用此口径，直接对齐乘客体验。
+- **Metrics**:
+  - RMSE (Time/Speed), KS Distance (Distribution), P90 Error.
+  - Loss Function: $J = w \cdot J_{L1}(Micro) + (1-w) \cdot J_{L2}(Macro)$
 
 ### 3.3 Robustness Definition（重点）
 
@@ -99,10 +100,19 @@ Bus simulation; parameter inversion; multi-level calibration; Bayesian optimizat
 - 预算：N0 初始 + N_iter 迭代
 - 终止：最优改进 < ε 或预算用完
 
-### 【需要重写，应为IES】4.4 L2 Data Assimilation / Constraint（有则写）
+### 4.4 L2 Data Assimilation: Iterative Ensemble Smoother (IES)
 
-- EnKF：状态 x、观测 y、更新公式（简写一行）
-- 解释：让宏观速度/拥堵形态与现实同步，减少“只靠调参数硬拟合”
+- **Algorithm 1: Constraint-aware IES**
+  - **State Vector ($m$)**: Global Capacity Factor (CF), Background minGap, Impatience.
+  - **Observation Operator ($\mathcal{H}(m)$)**:
+    - Input: Simulated StopEvents ($t_{arr}, t_{dep}$)
+    - Process: Segment matching -> D2D Travel Time aggregation -> Harmomic Mean Speed.
+    - **Safety Rails**:
+      - `Insertion Validity`: Discard result if insertion_rate < 85%.
+      - `Coverage Gate`: Only use links with >50% overlap.
+      - `Boundary Logic`: If parameter hits bound, check gradient direction.
+  - **Update Step**: $m_{new} = m + C_{md} (C_{dd} + R)^{-1} (d_{obs} - d_{sim})$
+  - 解释：让宏观速度/拥堵形态与现实同步，减少“只靠调参数硬拟合”。
 
 ### 4.5 Complexity & Implementation
 
@@ -125,12 +135,19 @@ Bus simulation; parameter inversion; multi-level calibration; Bayesian optimizat
 - 对齐站点事件（arrive/depart）
 - 路段速度聚合（时间窗）
 
+### 5.2.1 Background Traffic Synthesis
+- Source: `dfrouter` on detector data.
+- **Source Filtering**:
+  - Breadth-First Search (BFS, depth=5) to validate source-to-sink connectivity.
+  - **Corridor Filtering**: Retain only vehicles traversing bus corridors.
+  - Result: ~1150 vph effective injection.
+
 ### 5.3 Baselines
 
 - B1：手工经验参数 / 默认参数（无优化）
 - B2：单代理 Kriging + 单层 J1（验证代理模型基本效果）
 - B3：Kriging-RBF 融合 + 单层 J1（验证融合方案是否带来增益）
-- B4：IES + 双层 J1+J2（验证多层目标的贡献）
+- B4：**IES (L2) with L1 frozen at B2***（验证多层目标的贡献，Fixed Micro, Tuning Macro）
 
 > **Note**: 消融实验预期 B4 > B2 > B1；B3 与 B2 差异取决于问题结构
 
@@ -152,9 +169,15 @@ Bus simulation; parameter inversion; multi-level calibration; Bayesian optimizat
 
 - 站间时间误差、停站时长分布对齐（CDF 图）
 
-### 6.3 Accuracy on L2 Metrics
+### 6.3 L2 Calibration Results (The "Caliber Switch" Story)
 
-- 速度时序对比、空间热力图（time–space diagram）
+- **6.3.1 Failure Mode (Moving-only)**:
+  - CF pushed to 2.5 (limit), Speed stuck at 15km/h (Real ~5km/h).
+  - Demonstrates unidentifiability under wrong operator.
+- **6.3.2 Success Mode (Door-to-Door)**:
+  - After metric switch: RMSE drops 10km/h -> 2.4km/h.
+  - KS drops 0.58 -> 0.18 (Distribution Alignment).
+  - **Main Result**: D2D travel_time time–space diagram (Figure 5).
 
 ### 6.4 Robustness Tests（你论文的“卖点”）
 
@@ -171,7 +194,9 @@ Bus simulation; parameter inversion; multi-level calibration; Bayesian optimizat
 
 ### 6.6 Limitations
 
-- 数据偏差、假设（例如乘客上下客模型简化）
+- **Insertion Saturation**: 仿真受限于物理空间注入上限，高需求≠高密度（Gridlock vs High Flow）。
+- **Global vs Local**: 全局 CF 无法解决局部瓶颈，但 Corridor reweighting 收益递减（Core edges dominate）。
+- **Vehicle Dynamics**: SUMO 默认起步/黄灯损失可能导致 5.9km/h vs 4.8km/h 的最终系统误差。
 - 可扩展性（多线路、多走廊）
 
 ---
@@ -204,7 +229,7 @@ Bus simulation; parameter inversion; multi-level calibration; Bayesian optimizat
 - **Fig.2** Study corridor + stops + detectors（区域示意）
 - **Fig.3** Convergence curve（J/J1/J2 vs iteration）
 - **Fig.4** L1 CDF 对比（dwell/segment time）
-- **Fig.5** L2 time–space speed diagram 对比
+- **Fig.5** L2 D2D Time-Space Diagram 对比
 - **Fig.6** Robustness boxplot（across days/periods）
 - **Table 1** Parameter ranges & meaning（θ 每个参数的上下限）
 - **Table 2** Baseline settings & budgets（各方法仿真次数/时间）

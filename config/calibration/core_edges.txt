@@ -1,0 +1,53 @@
+# Core Edges for P13-3 Corridor Flow Weighting
+# Source: Obs 3, 4, 9 from link_edge_mapping_corridor_M11.csv
+# These are the most critical stop-to-stop segments for D2D speed calibration.
+
+# Obs 3 (68X inbound, high error)
+107154_rev
+107002
+105952_rev
+105929
+115859
+105926
+105922
+105923
+105925
+
+# Obs 4 (68X inbound, long segment)
+115859
+105926
+105922
+105923
+105925
+105910
+105819
+137853
+137854
+285166
+105817
+105832
+105830
+105829
+105827
+106986_rev
+106985_rev
+105836_rev
+105886_rev
+105866_rev
+105880_rev
+106995
+106996
+106993
+
+# Obs 9 (68X inbound, end segment)
+107087
+106628
+107088
+106625
+106623
+106624
+106537_rev
+105377
+106535
+9343
+9029

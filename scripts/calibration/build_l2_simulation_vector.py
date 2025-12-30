@@ -120,19 +120,25 @@ def parse_edgedata_xml(
 def parse_edgedata_xml_subset(
     edgedata_path: str,
     edge_subset: set,
-    min_sampled_seconds: float = 10.0
+    min_sampled_seconds: float = 10.0,
+    t_min: float = 0.0,
+    t_max: float = 86400.0
 ) -> Tuple[Dict[str, float], Dict[str, float]]:
     """
     只解析 mapping 子集内的边数据，使用 sampledSeconds 加权聚合跨 interval。
+    并支持时间窗过滤 [t_min, t_max]。
     
     修复：
     - 保留 speed >= 0（拥堵数据很重要）
     - 跨 interval 使用 sampledSeconds 加权平均，而非覆盖写入
+    - 时间窗过滤：只聚合 begin >= t_min 且 end <= t_max 的 intervals
     
     Args:
         edgedata_path: edgedata.out.xml 路径
         edge_subset: 需要解析的边 ID 子集（包括 _rev 变体）
         min_sampled_seconds: 最小采样时间阈值
+        t_min: 时间窗开始 (秒)
+        t_max: 时间窗结束 (秒)
     
     Returns:
         (edge_speeds, edge_sampled_seconds):
@@ -140,6 +146,7 @@ def parse_edgedata_xml_subset(
             edge_sampled_seconds: Dict[edge_id, sampledSeconds] (总和)
     """
     print(f"[INFO] 解析 edgedata (子集模式, 加权聚合): {edgedata_path}")
+    print(f"[INFO] 时间窗过滤: [{t_min:.1f}, {t_max:.1f}]")
     print(f"[INFO] 目标边子集大小: {len(edge_subset)}")
     
     # 扩展子集，包含 _rev 变体
@@ -161,6 +168,15 @@ def parse_edgedata_xml_subset(
     root = tree.getroot()
     
     for interval in root.findall('.//interval'):
+        begin = float(interval.get('begin', -1))
+        end = float(interval.get('end', -1))
+        
+        # 时间窗过滤
+        if begin < t_min:
+            continue
+        if end > t_max:
+             continue
+
         for edge in interval.findall('edge'):
             edge_id = edge.get('id')
             
@@ -308,7 +324,10 @@ def build_simulation_vector(
     output_csv: Optional[str] = None,
     min_sampled_seconds: float = 10.0,
     min_coverage: float = 0.7,
-    verbose: bool = True
+    t_min: float = 0.0,
+    t_max: float = 86400.0,
+    verbose: bool = True,
+    **kwargs
 ) -> pd.DataFrame:
     """
     构建与观测向量同口径的 45 维仿真向量。
@@ -320,7 +339,10 @@ def build_simulation_vector(
         net_file: hk_irn_v3.net.xml 路径
         output_csv: 输出 CSV 路径（可选）
         min_sampled_seconds: 边采样时间阈值
+        min_sampled_seconds: 边采样时间阈值
         min_coverage: 最小长度覆盖率门槛 (默认 0.7)
+        t_min: (可选) 统计起始时间
+        t_max: (可选) 统计结束时间
         verbose: 是否打印详细信息
     
     Returns:
@@ -330,6 +352,34 @@ def build_simulation_vector(
             coverage, coverage_raw, matched_length_m, total_length_m, 
             reason, matched
     """
+    # 0. 分发逻辑 (支持 Travel Time)
+    metric_type = kwargs.get('metric_type', 'speed')
+    
+    if metric_type == 'traveltime':
+        # 动态导入 TT 模块
+        try:
+            from build_l2_sim_vector_traveltime import build_simulation_vector_tt
+            
+            # 从 kwargs 提取 tt_mode，默认 'moving'
+            tt_mode = kwargs.get('tt_mode', 'moving')
+            
+            # 推断 route_stop_csv 路径
+            route_stop_csv = str(Path(observation_csv).parent.parent / 'processed' / 'kmb_route_stop_dist.csv')
+            
+            return build_simulation_vector_tt(
+                stopinfo_path=edgedata_path,  # 注意：这里edgedata_path实际传的是stopinfo路径
+                observation_csv=observation_csv,
+                route_stop_csv=route_stop_csv,
+                output_csv=output_csv,
+                verbose=False,
+                tmin=t_min,
+                tmax=t_max,
+                tt_mode=tt_mode
+            )
+        except ImportError:
+            print("[ERROR] 无法导入 build_l2_sim_vector_traveltime")
+            return pd.DataFrame()
+
     # 1. 加载数据
     obs_df = pd.read_csv(observation_csv)
     link_edge_map = load_link_edge_mapping(mapping_csv)
@@ -347,7 +397,7 @@ def build_simulation_vector(
     
     # 使用子集模式解析 edgedata
     edge_speeds, edge_sampled_seconds = parse_edgedata_xml_subset(
-        edgedata_path, all_mapped_edges, min_sampled_seconds
+        edgedata_path, all_mapped_edges, min_sampled_seconds, t_min, t_max
     )
     
     # 3. 构建仿真向量
@@ -522,10 +572,29 @@ def main():
         help='最小长度覆盖率门槛 (默认: 0.7)'
     )
     parser.add_argument(
+        '--tmin',
+        type=float,
+        default=0.0,
+        help='统计时间窗起始 (秒), 默认 0'
+    )
+    parser.add_argument(
+        '--tmax',
+        type=float,
+        default=86400.0,
+        help='统计时间窗结束 (秒), 默认 86400'
+    )
+    parser.add_argument(
         '--debug-links',
         type=str,
         default=None,
         help='调试：打印指定 link 的详细计算过程 (逗号分隔，如 "1,10,30")'
+    )
+    parser.add_argument(
+        '--tt-mode',
+        type=str,
+        default='moving',
+        choices=['moving', 'door'],
+        help='Travel Time 计算口径 (仅对 traveltime 指标有效)'
     )
     
     args = parser.parse_args()
@@ -543,7 +612,10 @@ def main():
         net_file=args.net,
         output_csv=args.output,
         min_sampled_seconds=args.min_sampled_seconds,
-        min_coverage=args.min_coverage
+        min_coverage=args.min_coverage,
+        t_min=args.tmin,
+        t_max=args.tmax,
+        tt_mode=args.tt_mode
     )
     
     # 计算残差统计

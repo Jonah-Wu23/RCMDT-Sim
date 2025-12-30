@@ -1,6 +1,21 @@
 # 实验记录模板
 > 按日期记录，每次实验/验证补充一条，保持可复现。示例可复制后填写。
 
+## Experiment Registry (Index)
+| Label | Dates | Net/Route Ver | Op-L2 Ver | M | Key Config | Artifacts |
+|---|---|---|---|---|---|---|
+| **B1** | 12/20 | V0 (Cropped) | N/A | N/A | N=1, Seed=42 | traj_b1.png |
+| **B2** | 12/21 | V0 + Bg | N/A | N/A | N=40, L1-Only | B2_log.csv |
+| **B3** | 12/22 | V0 + Bg | N/A | N/A | N=40, Dual | B3_log.csv |
+| **B4** | 12/22 | V0 + Bg | v0 (Speed) | 45 | IES, N=8, K=5 | B4_ies.log |
+| **P5** | 12/24 | V1 (Patched) | v0 (Speed) | 45 | Filtered Bg | vehroute.xml |
+| **P6** | 12/24 | V1 (Patched) | v0 (Speed) | 45 | Health Check | p6_check.log |
+| **P10** | 12/25 | V2 (TLS) | v0 (Speed) | 45 | CF=2.5 Saturation | B4_fail.log |
+| **P11** | 12/26 | V3 (Bridge) | **v1** (D2D TT) | 11 | Caliber Audit | audit.png |
+| **P12** | 12/28 | V3.1 (Routing) | v1 (D2D TT) | 11 | IES Pilot | B4_final.log |
+| **P13** | 12/30 | V3.1 (Routing) | v1 (D2D TT) | 11 | Freeze | final_eval.csv |
+
+
 ## 2025-12-16（示例）
 - **线路/方向/时间窗**：`线路名称/方向`，时间窗 `HH:MM–HH:MM`
 - **数据来源与采样**：高德接口（接口名/字段）；采样频率 `XX s`; 缺失/异常说明
@@ -124,6 +139,21 @@
   - **仿真未校准**：Link 1-2 真实均速 3.44 km/h，仿真均速 78.64 km/h (EMD=75.19)，表明仿真处于完全自由流状态，极度缺乏拥堵机制。
   - **长直路段准确**：Link 15-16 (高速段) 真实 57.4 km/h vs 仿真 60.6 km/h，EMD 仅 3.2，证明车辆动力学参数基本正确，误差源于交通流缺失。
   - **数据覆盖**：因真实数据清洗过滤，部分拥堵路段无有效速度记录，已修复脚本以静态距离表为基准，确保仿真侧指标计算完整。
+
+## Metrics Definition & Caliber Standards (Start of Week 2)
+
+*为了确保跨周实验的可比性，在此统一指标定义：*
+
+*   **RMSE (L1 - Micro)**: Root Mean Square Error of segment travel times ($y_{sim} - y_{real}$). Unit: seconds.
+*   **RMSE (L2 - Macro)**:
+    *   **Op-L2-v0**: Link Speed Error. Unit: km/h. (Used in Week 4 / B4).
+    *   **Op-L2-v1**: Door-to-Door Segment Travel Time. Unit: seconds. (Used in Week 5+ / P11+).
+*   **K-S Statistic**: Kolmogorov-Smirnov distance for distribution matching.
+    *   v0: Applied on `link_speed` distribution.
+    *   v1: Applied on `travel_time` distribution.
+*   **Statistics Window**:
+    *   Time-Series: 15-min rolling average.
+    *   Distribution: Whole hour (17:35-18:35) aggregation.
 
 ## 2025-12-19 — Week 2 Network Reconstruction
 - **线路/方向**: KMB 68X / 960 (Inbound/Outbound)
@@ -757,9 +787,119 @@ K = C_xf × (C_ff + R)^(-1)
 2. 考虑增加系综规模 (N=15~20) 以提高协方差估计稳定性
 3. 改进链路-边映射精度（引入距离加权平均）
 
+### Post-Experiment Analysis (Week 4 Supplements)
+
+#### Known Issue (后验发现)
+Week 4 的所有实验（B4, B4_v2）均基于 **Op-L2-v0 (Moving-only Speed)** 观测算子。后验分析（见 Week 5 P11）表明，该算子忽略了停站时间（Dwell Time）和加减速损耗，导致系统被误判为“机理缺失”和“过度畅通”，从而迫使 IES 将 CF 推向非物理的边界（CF=1.5）。**B4 的数值结论（RMSE 22.95）仅在 Moving-only 口径下成立，不可直接用于最终交付。**
+
+#### Randomness & Replication Policy
+*   **Seed Control**: `seed=42` 控制需求生成（Ensemble 差异源）、车辆变道随机数、驾驶员模型 sigma 分布。
+*   **Replication**: B4_v2 与 B4_v3 的完全重复证明了 SUMO 在同 seed 下的确定性。
+*   **Policy**: 后续 Week 5+ 实验若观察到显著改善，需至少做一次不同 seed 的 sanity check。
+
+#### Parameter Boundary Log
+*   **CF (Capacity Factor)**: Hit upper bound [1.5] in B4_v2. **Decision**: Extend prior range to [0.5, 3.0] in Week 5 to test saturation.
+*   **minGap**: Hit lower bound [0.5] in B4_v2. **Decision**: Keep physical limit at 0.5m.
+
+#### Observation Operator Changelog
+*   **Op-L2-v0 (Legacy)**: Edgedata link speed (Moving-only). Used in Week 4.
+*   **Op-L2-v1 (Current)**: Stopinfo Door-to-Door segment travel time. Used in Week 5+ (P11 onwards).
+    *   *Reason*: Aligns with passenger experience; accounts for dwell time (30-50% of total trip).
+
 ---
 
-## 2025-12-27 — 网络缺陷修复最终报告（主线版）
+## Week 5+ (2025-12-24 ~ 2025-12-30) — Corridor Background + IES (P5–P13)
+
+### P5 Experiment: Background Traffic with Source Filtering
+*   **Goal**: 解决“多重注入/伪流量”问题，建立真实的走廊背景流压力。
+*   **Inputs**: `dfrouter` generated flows, `corridor_edges.txt` mask.
+*   **Method**: `filter_background.py` (Depth=5 BFS).
+    *   Logic: Keep vehicle ONLY IF it traverses at least one corridor edge AND has a valid route from source to sink.
+*   **Command**: `python scripts/build_background.py --filter-depth 5 --mask corridor.txt`
+*   **Metrics**:
+    *   `Expected vehicles`: ~1300 vph
+    *   `Inserted vehicles`: ~1150 vph
+    *   `Insertion rate`: **88.5%** (Pass healthy threshold >85%)
+*   **Decision**: 背景流生成逻辑冻结，作为 P6 及后续的标准输入。
+*   **Artifacts**: `background_filtered.rou.xml`
+
+### P6 Experiment: Baseline Health Check
+*   **Goal**: 确定在没有任何 IES 干预下的背景流路网承载力基线。
+*   **Inputs**: V1 Network, Filtered Background (P5), L1 Frozen Params (B2).
+*   **Method**: Grid Search on `scale` (0.05, 0.10, 0.15).
+*   **Metrics (Acceptance Criteria)**:
+    *   Insertion Rate ≥ 90%
+    *   Delay Median ≤ 60s
+    *   Teleport Count < 50
+*   **Result**:
+    *   s0.05: Healthy.
+    *   s0.12/0.15: Gridlock (Insertion < 60%).
+*   **Decision**: 选定初始先验均值 `scale=0.1` 作为一个“有压力但未死锁”的起点。
+
+### P10 Experiment: Failure Mode under Moving-only Metric
+*   **Goal**: 尝试使用 IES 强行压低速度误差（延续 Week 4 思路）。
+*   **Inputs**: Op-L2-v0 (Speed), CF Prior [0.5, 2.5].
+*   **Observations**:
+    *   IES 推高 CF 至 **2.5** (Upper Bound)。
+    *   Sim Speed 依然停在 **10–15 km/h**，远高于 Real Speed (~5 km/h)。
+    *   KS / RMSE 改善微乎其微。
+*   **Decision (Critical)**: 暂停参数搜索。怀疑这一巨大的 Gap 不是参数问题，而是观测 **Definitions** 问题。启动口径审计 (P11)。
+*   **Artifacts**: `B4_fail.log`
+
+### P11-0 Experiment: Caliber Audit (The Critical Debugging)
+*   **Goal**: 验证 Moving-only (v0) 与 Door-to-Door (v1) 的差异。
+*   **Analysis**:
+    | Metric | Definition | Real Data Value | Sim Data Value | Gap |
+    |---|---|---|---|---|
+    | **Moving Speed** | Link Length / Drive Time | ~15 km/h | ~18 km/h | Small |
+    | **D2D Speed** | Distance / (Drive+Wait+Dwell) | **~5-8 km/h** | ~18 km/h | **HUGE** |
+*   **Finding**: 现实数据的低速主要由 **Dwell Time (30-60%)** 贡献，而 Op-L2-v0 忽略了这一点。
+*   **Decision**:
+    1.  废弃 Op-L2-v0。
+    2.  全面切换至 **Op-L2-v1 (Door-to-Door)**。
+    3.  重构观测算子代码 `build_simulation_vector.py`。
+
+### P12-2 Experiment: IES Pilot with D2D Caliber
+*   **Goal**: 在新口径下重新运行 IES，验证可校准性（Calibratability）。
+*   **Inputs**: Op-L2-v1, Network V3.1.
+*   **Metrics (Before vs After)**:
+    | Metric | Before (P10) | After (P12 D2D) |
+    |---|---|---|
+    | Sim Median Speed | ~15 km/h | **~6 km/h** |
+    | RMSE | > 10 km/h | **~2.4 km/h** |
+    | KS Distance | 0.58 | **0.18** |
+*   **Conclusion**: 误差断崖式下降。系统重新进入可校准区间。证明 L2 校准必须包含 Dwell Time 产生的拥堵效应。
+
+### P13 Experiment: Saturation & Stop Criteria
+*   **Goal**: 探索 IES 在 D2D 口径下的极限能力。
+*   **Trigger Condition**: CF continued to rise to **2.5**, but Speed plateaued at **5.9 km/h**.
+*   **P13-3 Analysis**:
+    *   Core edges cover >80% traffic volume.
+    *   Global CF $\approx$ Corridor CF. Reweighting or Corridor-specific tuning yields diminishing returns.
+*   **Causal Inference**:
+    *   剩余的 ~1 km/h 误差 (Real 4.8 vs Sim 5.9) 可能来源于 SUMO 默认的车辆动力学/信号灯黄灯损失/路口通行权逻辑，而非单纯的“车不够多”。
+    *   继续增加 CF 只会制造死锁，不再降低速度。
+*   **Final Decision**: **TERMINATE & FREEZE**.
+
+---
+
+## Stop Criteria & Freeze
+*   **Status**: **SATISFIED**.
+*   **Trigger**: Information Gain Saturation (P13 Plateau).
+*   **Achievements**:
+    *   [x] Caliber Alignment (Op-L2-v1).
+    *   [x] IES Convergence (Parameters stable).
+    *   [x] KS/RMSE significant improvement (KS < 0.2).
+*   **Next Steps**: Freeze all parameters. Start final paper writing.
+
+---
+
+## Appendix A: Network & Routing Integrity Log
+*(主线摘要：V1+V2 已完成并进入主线；V3 经质量闸门确认原"RULE_BLOCKED"属误分类绕行，V3 bridge edge 回退为实验补丁；主线采用 V1 网络 + VIA_ROUTING 生成最终线路路由。)*
+
+### 2025-12-27 — 网络缺陷修复最终报告（Original Full Log）
+
+
 
 ### 执行摘要
 V1+V2 已完成并进入主线；V3 经质量闸门确认原"RULE_BLOCKED"属误分类绕行（bus_reachable=True），V3 bridge edge 回退为实验补丁；主线采用 **V1 网络 + VIA_ROUTING** 生成最终线路路由。

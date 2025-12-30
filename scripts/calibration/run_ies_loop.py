@@ -62,6 +62,23 @@ def ensure_dir(path: str) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
 
+def parse_summary_insertion_rate(summary_path: str) -> float:
+    """从 summary.xml 解析插入率 (inserted / loaded)"""
+    try:
+        tree = ET.parse(summary_path)
+        root = tree.getroot()
+        steps = root.findall('step')
+        if not steps:
+            return 0.0
+        last_step = steps[-1]
+        inserted = int(last_step.get('inserted', 0))
+        loaded = int(last_step.get('loaded', 0))
+        return inserted / loaded if loaded > 0 else 0.0
+    except Exception:
+        return 0.0
+
+
+
 class IESLoop:
     """
     迭代式系综平滑 (IES) 校准循环
@@ -86,7 +103,11 @@ class IESLoop:
         use_group_weights: bool = True,  # 使用组归一权重
         cyy_nugget_ratio: float = 0.05,  # Cyy nugget 正则化比率
         adaptive_damping: bool = True,  # 自适应阻尼（clip 后降低 β）
-        obs_var_floor: float = 1.0  # obs_var 下限 (km/h)^2
+        obs_var_floor: float = 1.0,  # obs_var 下限 (km/h)^2
+        t_min: float = 61200.0,  # 时间窗起始 (17:00)
+        t_max: float = 64800.0,   # 时间窗结束 (18:00)
+        tt_mode: str = 'moving',  # T Mode: moving vs door
+        net_file: str = None  # 自定义网络文件路径
     ):
         self.root = Path(project_root)
         self.label = label
@@ -94,6 +115,11 @@ class IESLoop:
         self.max_iters = max_iters
         self.seed = seed
         self.use_baseline = use_baseline
+        
+        # 时间窗配置
+        self.t_min = t_min
+        self.t_max = t_max
+        self.tt_mode = tt_mode
         
         # IES 稳定性增强配置
         self.es_mda_alpha = es_mda_alpha if es_mda_alpha is not None else max_iters
@@ -106,6 +132,7 @@ class IESLoop:
         
         self.base_seed = seed  # 保存基础 seed
         np.random.seed(seed)  # 初始化用于 __init__ 阶段
+
         
         # 加载配置
         self._load_priors()
@@ -123,7 +150,12 @@ class IESLoop:
         
         # SUMO 相关路径 (B4-Sanity: 统一使用研究区域口径)
         self.base_sumocfg = self.root / "sumo" / "config" / "experiment2_calibrated.sumocfg"
-        self.net_file = self.root / "sumo" / "net" / "hk_cropped.net.xml"  # 研究区域网络
+        if net_file:
+            self.net_file = Path(net_file)
+            print(f"[IES] 使用自定义网络文件: {self.net_file}")
+        else:
+            self.net_file = self.root / "sumo" / "net" / "hk_cropped.net.xml"  # 研究区域网络
+        
         self.bus_stops = self.root / "sumo" / "additional" / "bus_stops_cropped.add.xml"  # cropped 站点
         self.bus_route = self.root / "sumo" / "routes" / "fixed_routes_cropped.rou.xml"  # cropped 路由
         self.bg_route_base = self.root / "sumo" / "routes" / "background_cropped.rou.xml"  # cropped 背景
@@ -144,6 +176,9 @@ class IESLoop:
         print(f"  - Cyy nugget ratio = {self.cyy_nugget_ratio}")
         print(f"  - 自适应阻尼 = {self.adaptive_damping}")
         print(f"  - obs_var 下限 = {np.sqrt(self.obs_var_floor):.1f} km/h")
+        print(f"  - 时间窗过滤 = [{self.t_min:.1f}, {self.t_max:.1f}]")
+        print(f"  - TT Mode = {self.tt_mode}")
+
         
         # Corridor 详情打印
         if 'route' in self.obs_df.columns and 'bound' in self.obs_df.columns:
@@ -529,7 +564,7 @@ class IESLoop:
         sumocfg_path: str,
         edgedata_path: str,
         scale_factor: float
-    ) -> Optional[str]:
+    ) -> Tuple[Optional[str], float]:
         """
         运行单个 SUMO 仿真
         
@@ -539,12 +574,18 @@ class IESLoop:
             scale_factor: 流量缩放因子
         
         Returns:
-            成功时返回 edgedata_path，失败时返回 None
+            (edgedata_path, insertion_rate): 成功时返回路径和插入率，失败时返回 (None, 0.0)
         """
+        # 推断 summary 路径
+        run_dir = os.path.dirname(edgedata_path)
+        summary_path = os.path.join(run_dir, "summary.xml")
+        
         cmd = [
             "sumo",
             "-c", sumocfg_path,
             "--scale", f"{scale_factor:.3f}",
+            "--summary-output", summary_path,
+            "--stop-output", os.path.join(run_dir, "stopinfo.xml"),
         ]
         
         try:
@@ -557,23 +598,24 @@ class IESLoop:
             )
             
             if os.path.exists(edgedata_path):
-                return edgedata_path
+                insertion_rate = parse_summary_insertion_rate(summary_path)
+                return edgedata_path, insertion_rate
             else:
                 print(f"[WARN] edgedata 文件未生成: {edgedata_path}")
-                return None
+                return None, 0.0
                 
         except subprocess.CalledProcessError as e:
             print(f"[ERROR] 仿真失败: {sumocfg_path}")
             print(f"  stderr: {e.stderr[:500] if e.stderr else 'N/A'}")
-            return None
+            return None, 0.0
         except subprocess.TimeoutExpired:
             print(f"[ERROR] 仿真超时: {sumocfg_path}")
-            return None
+            return None, 0.0
 
     def run_parallel_simulations(
         self,
         configs: List[Tuple[str, str, float]]
-    ) -> List[Optional[str]]:
+    ) -> Tuple[List[Optional[str]], List[float]]:
         """
         并行运行所有仿真
         
@@ -581,13 +623,13 @@ class IESLoop:
             configs: List of (sumocfg_path, edgedata_path, scale_factor)
         
         Returns:
-            List of edgedata_paths (成功) 或 None (失败)
+            (edgedata_paths, insertion_rates)
         """
         # 限制最大并行度为 2 (适应 16G 内存)
         max_workers = min(2, self.ensemble_size)
         print(f"[IES] 启动并行仿真: {len(configs)} 个实例, {max_workers} 并行度")
         
-        results = [None] * len(configs)
+        results = [(None, 0.0)] * len(configs)
         
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
             future_to_idx = {
@@ -604,12 +646,16 @@ class IESLoop:
                     results[idx] = future.result()
                 except Exception as e:
                     print(f"[ERROR] 仿真 {idx} 异常: {e}")
-                    results[idx] = None
+                    results[idx] = (None, 0.0)
         
-        success_count = sum(1 for r in results if r is not None)
-        print(f"[IES] 仿真完成: {success_count}/{len(configs)} 成功")
+        edgedata_paths = [r[0] for r in results]
+        insertion_rates = [r[1] for r in results]
         
-        return results
+        success_count = sum(1 for p in edgedata_paths if p is not None)
+        avg_insertion = np.mean([r for r in insertion_rates if r > 0]) if any(r > 0 for r in insertion_rates) else 0.0
+        print(f"[IES] 仿真完成: {success_count}/{len(configs)} 成功, 平均插入率={avg_insertion:.2%}")
+        
+        return edgedata_paths, insertion_rates
 
     def collect_simulation_results(
         self,
@@ -639,14 +685,23 @@ class IESLoop:
                 continue
             
             try:
-                # 使用同口径脚本构建仿真向量（使用 corridor 版本）
+                # 强制使用 Travel Time 模式 (P12 D2D 验证)
+                run_dir = os.path.dirname(edgedata_path)
+                stopinfo_path = os.path.join(run_dir, "stopinfo.xml")
+                
+                # 使用同口径脚本构建仿真向量
+                # 即使 obs 是 speed-based, build_sim_vector 会处理转换
                 sim_df = build_simulation_vector(
-                    edgedata_path=edgedata_path,
-                    observation_csv=self.obs_csv_path,  # 使用加载时保存的路径
-                    mapping_csv=self.mapping_csv_path,  # 使用加载时保存的路径
+                    edgedata_path=stopinfo_path, # 传 stopinfo 路径
+                    observation_csv=self.obs_csv_path,
+                    mapping_csv=self.mapping_csv_path,
                     net_file=str(self.net_file),
                     min_sampled_seconds=10.0,
-                    verbose=False
+                    t_min=self.t_min,
+                    t_max=self.t_max,
+                    verbose=False,
+                    metric_type='traveltime', # 强制 Travel Time
+                    tt_mode=self.tt_mode
                 )
                 
                 # 提取速度和匹配状态
@@ -895,7 +950,13 @@ class IESLoop:
             
             # 3.3 生成配置并并行仿真
             configs = self.generate_sumo_configs(k + 1, X_ensemble)
-            edgedata_paths = self.run_parallel_simulations(configs)
+            edgedata_paths, insertion_rates = self.run_parallel_simulations(configs)
+            
+            # 护栏 A: 插入率惩罚 (低于 50% 标记为无效)
+            for i, ir in enumerate(insertion_rates):
+                if ir < 0.50:
+                    print(f"[IES] Run {i}: 插入率 {ir:.2%} < 50%, 标记为无效")
+                    edgedata_paths[i] = None  # 使该样本在 collect 时被跳过
             
             # 3.4 收集结果
             Y_sim, matched_masks = self.collect_simulation_results(edgedata_paths)
@@ -1005,6 +1066,32 @@ def main():
         default=1.0,
         help='obs_var 下限 (km/h) (默认: 1.0)'
     )
+    parser.add_argument(
+        '--tmin',
+        type=float,
+        default=61200.0,
+        help='时间窗起始 (秒), 默认 61200 (17:00)'
+    )
+    parser.add_argument(
+        '--tmax',
+        type=float,
+        default=64800.0,
+        help='时间窗结束 (秒), 默认 64800 (18:00)'
+    )
+    
+    parser.add_argument(
+        '--tt-mode',
+        type=str,
+        default='moving',
+        choices=['moving', 'door'],
+        help='Travel Time 计算口径 (仅对 traveltime 指标有效)'
+    )
+    parser.add_argument(
+        "--net-file",
+        type=str,
+        default=None,
+        help="自定义网络文件路径"
+    )
     
     args = parser.parse_args()
     
@@ -1021,7 +1108,11 @@ def main():
         use_group_weights=not args.no_group_weights,
         cyy_nugget_ratio=args.cyy_nugget,
         adaptive_damping=not args.no_adaptive_damping,
-        obs_var_floor=args.obs_var_floor
+        obs_var_floor=args.obs_var_floor,
+        t_min=args.tmin,
+        t_max=args.tmax,
+        tt_mode=args.tt_mode,  # Pass tt_mode from CLI args
+        net_file=args.net_file # Pass net_file from CLI args
     )
     
     final_params = ies.run()
