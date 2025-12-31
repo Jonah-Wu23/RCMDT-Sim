@@ -5,6 +5,7 @@ sumo/routes
 sumo/output
 sumo/net
 data2/
+another data/
 
 # 忽略虚拟环境文件夹
 .venv/
