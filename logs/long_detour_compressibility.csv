@@ -1,5 +1,0 @@
-route,bound,seq,from_edge,to_edge,kmb_len,bus_path_len,passenger_path_len,gap,bus_ratio,passenger_ratio,verdict,fix
-68X,inbound,1→2,105735_rev,105653_rev,665.791,2399.21,2399.2099999999996,4.547473508864641e-13,3.603548260640351,3.60354826064035,NO_BUS_PENALTY,"Issue is network structure, not bus restrictions"
-68X,inbound,2→3,105653_rev,106831_rev,205.596,989.72,989.72,0.0,4.813906885347964,4.813906885347964,NO_BUS_PENALTY,"Issue is network structure, not bus restrictions"
-68X,outbound,6→7,97407,96273_rev,505.042,1525.7,1525.7,0.0,3.0209368725769346,3.0209368725769346,NO_BUS_PENALTY,"Issue is network structure, not bus restrictions"
-960,inbound,9→10,4833,261296,2772.681,8645.340000000002,8645.340000000002,0.0,3.1180435109556424,3.1180435109556424,NO_BUS_PENALTY,"Issue is network structure, not bus restrictions"
