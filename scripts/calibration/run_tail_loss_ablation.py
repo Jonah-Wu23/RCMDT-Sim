@@ -743,44 +743,25 @@ def run_tail_loss_ablation(
     return df_results
 
 
-def generate_latex_table(df_results: pd.DataFrame, output_dir: str):
-    """生成 LaTeX 表格"""
+def generate_markdown_table(df_results: pd.DataFrame, output_dir: str):
+    """生成 Markdown 表格"""
     
-    latex_lines = [
-        r"\begin{table}[htbp]",
-        r"\centering",
-        r"\caption{Tail-Loss Ablation Study}",
-        r"\label{tab:tail_loss_ablation}",
-        r"\begin{tabular}{l|c|cc|cc}",
-        r"\hline",
-        r"\textbf{Method} & \textbf{Eval RMSE} & \textbf{Robust} & \textbf{P90} & \textbf{BO Impr.} & \textbf{KS(clean)} \\",
-        r"\hline",
-    ]
+    md_lines = ["# Tail-Loss Ablation Study", ""]
     
-    for _, row in df_results.iterrows():
-        group = row['group']
-        eval_rmse = f"{row['eval_rmse']:.1f}" if pd.notna(row.get('eval_rmse')) else "N/A"
-        eval_robust = f"{row['eval_robust']:.1f}" if pd.notna(row.get('eval_robust')) else "N/A"
-        eval_p90 = f"{row['eval_p90']:.1f}" if pd.notna(row.get('eval_p90')) else "N/A"
-        bo_impr = f"{row['bo_improvement']:.1f}\\%"
-        ks_clean = f"{row['ks_clean']:.3f}" if pd.notna(row['ks_clean']) else "N/A"
-        
-        latex_lines.append(f"{group} & {eval_rmse} & {eval_robust} & {eval_p90} & {bo_impr} & {ks_clean} \\\\")
+    df_display = df_results[['group', 'eval_rmse', 'eval_robust', 'eval_p90', 'bo_improvement', 'ks_clean']].copy()
+    df_display['bo_improvement'] = df_display['bo_improvement'].apply(lambda x: f"{x:.1f}%")
+    df_display.columns = ['Method', 'Eval RMSE', 'Robust', 'P90', 'BO Impr.', 'KS(clean)']
     
-    latex_lines.extend([
-        r"\hline",
-        r"\multicolumn{6}{l}{\footnotesize Budget: 40 iters (15 LHS + 25 BO), Seed=42} \\",
-        r"\multicolumn{6}{l}{\footnotesize Eval RMSE/Robust/P90: 统一评估指标用于公平比较} \\",
-        r"\hline",
-        r"\end{tabular}",
-        r"\end{table}",
-    ])
+    md_lines.append(df_display.to_markdown(index=False, floatfmt=".3f"))
+    md_lines.append("")
+    md_lines.append("**Budget**: 40 iters (15 LHS + 25 BO), Seed=42")
+    md_lines.append("**Eval RMSE/Robust/P90**: 统一评估指标用于公平比较")
     
-    latex_file = os.path.join(output_dir, "tail_loss_ablation_table.tex")
-    with open(latex_file, "w", encoding="utf-8") as f:
-        f.write("\n".join(latex_lines))
+    md_file = os.path.join(output_dir, "tail_loss_ablation_table.md")
+    with open(md_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(md_lines))
     
-    print(f"LaTeX 表格已保存: {latex_file}")
+    print(f"Markdown 表格已保存: {md_file}")
 
 
 def main():

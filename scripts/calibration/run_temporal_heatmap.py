@@ -323,70 +323,53 @@ def plot_comparison_heatmaps(
     plt.close()
 
 
-def generate_latex_table(
+def generate_markdown_table(
     base_matrix: np.ndarray,
     full_matrix: np.ndarray,
     routes: List[str],
     periods: List[str],
     output_dir: str
 ):
-    """生成 LaTeX 表格"""
+    """生成 Markdown 表格"""
     
-    latex_lines = [
-        r"\begin{table}[htbp]",
-        r"\centering",
-        r"\caption{Temporal Robustness Comparison (Worst-15min KS)}",
-        r"\label{tab:temporal_heatmap}",
-        r"\begin{tabular}{l|" + "cc|" * len(routes) + "c}",
-        r"\hline",
-    ]
+    md_lines = ["# Temporal Robustness Comparison (Worst-15min KS)", ""]
     
-    # Header
-    header = r"\textbf{Period}"
+    # 构建表头
+    header = ["Period"]
     for route in routes:
-        header += f" & \\multicolumn{{2}}{{c|}}{{\\textbf{{{route}}}}}"
-    header += r" & \textbf{Mean Impr.} \\"
-    latex_lines.append(header)
+        header.extend([f"{route}_Base", f"{route}_Full"])
+    header.append("Mean_Impr")
     
-    subheader = ""
-    for route in routes:
-        subheader += r" & Base & Full"
-    subheader += r" & \\"
-    latex_lines.append(subheader)
-    latex_lines.append(r"\hline")
-    
-    # Data rows
+    # 构建数据行
+    data = []
     for i, period in enumerate(periods):
-        row = period
+        row = [period]
         improvements = []
         for j in range(len(routes)):
             base_val = base_matrix[i, j]
             full_val = full_matrix[i, j]
             
-            base_str = f"{base_val:.2f}" if not np.isnan(base_val) else "N/A"
-            full_str = f"{full_val:.2f}" if not np.isnan(full_val) else "N/A"
-            
-            row += f" & {base_str} & {full_str}"
+            row.append(f"{base_val:.2f}" if not np.isnan(base_val) else "N/A")
+            row.append(f"{full_val:.2f}" if not np.isnan(full_val) else "N/A")
             
             if not np.isnan(base_val) and not np.isnan(full_val):
                 improvements.append(base_val - full_val)
         
         mean_impr = np.mean(improvements) if improvements else np.nan
-        impr_str = f"+{mean_impr:.2f}" if not np.isnan(mean_impr) and mean_impr > 0 else f"{mean_impr:.2f}" if not np.isnan(mean_impr) else "N/A"
-        row += f" & {impr_str} \\\\"
-        latex_lines.append(row)
+        row.append(f"{mean_impr:+.2f}" if not np.isnan(mean_impr) else "N/A")
+        data.append(row)
     
-    latex_lines.extend([
-        r"\hline",
-        r"\end{tabular}",
-        r"\end{table}",
-    ])
+    df = pd.DataFrame(data, columns=header)
+    md_lines.append(df.to_markdown(index=False))
+    md_lines.append("")
+    md_lines.append("**Base**: 基础配置, **Full**: 完整协议")
+    md_lines.append("**Mean_Impr**: 平均改进 (Base - Full，正值表示改进)")
     
-    latex_file = os.path.join(output_dir, "temporal_heatmap_table.tex")
-    with open(latex_file, "w", encoding="utf-8") as f:
-        f.write("\n".join(latex_lines))
+    md_file = os.path.join(output_dir, "temporal_heatmap_table.md")
+    with open(md_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(md_lines))
     
-    print(f"LaTeX 表格已保存: {latex_file}")
+    print(f"Markdown 表格已保存: {md_file}")
 
 
 # ============================================================================

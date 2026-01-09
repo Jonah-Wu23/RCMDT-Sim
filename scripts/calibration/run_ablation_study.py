@@ -629,78 +629,40 @@ def run_ablation_study(
     df_results.to_csv(output_csv, index=False)
     print(f"\n[5] 结果已保存: {output_csv}")
     
-    # 生成 LaTeX 表格 (修正 A: 包含 BO 效率)
-    generate_latex_table(df_results, output_dir, bo_efficiency)
+    # 生成 Markdown 表格
+    generate_markdown_table(df_results, output_dir, bo_efficiency)
     
     return df_results
 
 
-def generate_latex_table(df: pd.DataFrame, output_dir: str, bo_efficiency: Dict = None):
-    """
-    生成 IEEE 格式的 LaTeX 表格
+def generate_markdown_table(df: pd.DataFrame, output_dir: str, bo_efficiency: Dict = None):
+    """生成 Markdown 表格"""
     
-    修正 (A): 添加 BO 效率说明和表注
-    修正 (B): 添加 worst-15min 口径说明
-    """
+    md_lines = ["# Ablation Study Results (P14 Off-Peak Transfer)", ""]
     
-    latex_lines = [
-        r"\begin{table}[htbp]",
-        r"\centering",
-        r"\caption{Ablation Study Results (P14 Off-Peak Transfer)}",
-        r"\label{tab:ablation}",
-        r"\small",
-        r"\begin{tabular}{l|cc|cc|c}",
-        r"\hline",
-        r"\textbf{Config} & \textbf{RMSE} & \textbf{MAE} & \textbf{KS(speed)} & \textbf{KS(TT)} & \textbf{Worst-15min}$^\dagger$ \\",
-        r"\hline",
-    ]
+    df_display = df[['config', 'rmse_tt', 'mae_tt', 'ks_speed', 'ks_tt', 'worst_15min_ks']].copy()
+    df_display.columns = ['Config', 'RMSE', 'MAE', 'KS(speed)', 'KS(TT)', 'Worst-15min†']
     
-    for _, row in df.iterrows():
-        config_name = row['config'].replace('+', r'\texttt{+}')
-        rmse = f"{row['rmse_tt']:.1f}" if pd.notna(row['rmse_tt']) else "N/A"
-        mae = f"{row['mae_tt']:.1f}" if pd.notna(row['mae_tt']) else "N/A"
-        ks_speed = f"{row['ks_speed']:.3f}" if pd.notna(row['ks_speed']) else "N/A"
-        ks_tt = f"{row['ks_tt']:.3f}" if pd.notna(row['ks_tt']) else "N/A"
-        worst = f"{row['worst_15min_ks']:.3f}" if pd.notna(row['worst_15min_ks']) else "N/A"
-        
-        latex_lines.append(
-            f"{config_name} & {rmse} & {mae} & {ks_speed} & {ks_tt} & {worst} \\\\"
-        )
+    md_lines.append(df_display.to_markdown(index=False, floatfmt=".3f"))
+    md_lines.append("")
     
-    latex_lines.append(r"\hline")
-    
-    # 修正 (A): 添加 BO 效率行
     if bo_efficiency:
         lhs_best = bo_efficiency.get('lhs_best_rmse', 0)
         bo_best = bo_efficiency.get('bo_best_rmse', 0)
         improvement = bo_efficiency.get('rmse_improvement', 0)
-        latex_lines.append(
-            r"\multicolumn{6}{l}{\footnotesize $^*$BO sample efficiency: "
-            f"LHS best={lhs_best:.1f}s $\\rightarrow$ BO best={bo_best:.1f}s "
-            f"({improvement:.1f}\\% improvement in 25 iters)" r"} \\"
-        )
+        md_lines.append(f"**BO sample efficiency**: LHS best={lhs_best:.1f}s → BO best={bo_best:.1f}s ({improvement:.1f}% improvement in 25 iters)")
+        md_lines.append("")
     
-    # 修正 (B): 添加 worst-15min 口径说明（与论文区分）
-    latex_lines.append(
-        r"\multicolumn{6}{l}{\footnotesize $^\dagger$Worst-15min: max KS over 4 random sub-windows (Rule-C cleaned).} \\"
-    )
-    latex_lines.append(
-        r"\multicolumn{6}{l}{\footnotesize Paper's worst-window (15:45-16:00) KS=0.3337 uses time-based split.} \\"
-    )
+    md_lines.append("**†Worst-15min**: max KS over 4 random sub-windows (Rule-C cleaned).")
+    md_lines.append("Paper's worst-window (15:45-16:00) KS=0.3337 uses time-based split.")
     
-    latex_lines.extend([
-        r"\hline",
-        r"\end{tabular}",
-        r"\end{table}",
-    ])
+    md_content = "\n".join(md_lines)
+    md_file = os.path.join(output_dir, "ablation_table.md")
     
-    latex_content = "\n".join(latex_lines)
-    latex_file = os.path.join(output_dir, "ablation_table.tex")
+    with open(md_file, "w", encoding="utf-8") as f:
+        f.write(md_content)
     
-    with open(latex_file, "w", encoding="utf-8") as f:
-        f.write(latex_content)
-    
-    print(f"    LaTeX 表格已保存: {latex_file}")
+    print(f"    Markdown 表格已保存: {md_file}")
 
 
 def main():

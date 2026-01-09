@@ -349,61 +349,27 @@ def plot_heatmaps(
     plt.close()
 
 
-def generate_latex_table(df_results: pd.DataFrame, output_dir: str):
-    """
-    生成敏感性分析 LaTeX 表格
+def generate_markdown_table(df_results: pd.DataFrame, output_dir: str):
+    """生成敏感性分析 Markdown 表格"""
     
-    修正 (C): 添加口径说明，与 experiments.md 对齐
-    - 本表为 KS(speed) on P14 Off-Peak 15:00-16:00 transfer
-    - experiments.md 中的 "KS ~0.29" 是 hour-level stress test
-    """
+    md_lines = ["# Threshold Sensitivity Analysis (P14 Off-Peak)", ""]
     
-    latex_lines = [
-        r"\begin{table}[htbp]",
-        r"\centering",
-        r"\caption{Threshold Sensitivity Analysis (P14 Off-Peak)}",
-        r"\label{tab:sensitivity}",
-        r"\small",
-        r"\begin{tabular}{cc|ccc}",
-        r"\hline",
-        r"$T^*$ (s) & $v^*$ (km/h) & Flagged (\%) & KS(speed)$^*$ & Worst-15min \\",
-        r"\hline",
-    ]
+    df_display = df_results[['T_star', 'v_star', 'flagged_pct', 'ks_clean', 'worst_15min_ks']].copy()
+    df_display.columns = ['T* (s)', 'v* (km/h)', 'Flagged (%)', 'KS(speed)*', 'Worst-15min']
     
-    for _, row in df_results.iterrows():
-        t_star = int(row['T_star'])
-        v_star = int(row['v_star'])
-        flagged = f"{row['flagged_pct']:.1f}"
-        ks_clean = f"{row['ks_clean']:.3f}" if pd.notna(row['ks_clean']) else "N/A"
-        worst = f"{row['worst_15min_ks']:.3f}" if pd.notna(row['worst_15min_ks']) else "N/A"
-        
-        # 高亮论文选择
-        if t_star == 325 and v_star == 5:
-            latex_lines.append(
-                f"\\textbf{{{t_star}}} & \\textbf{{{v_star}}} & "
-                f"\\textbf{{{flagged}}} & \\textbf{{{ks_clean}}} & \\textbf{{{worst}}} \\\\"
-            )
-        else:
-            latex_lines.append(
-                f"{t_star} & {v_star} & {flagged} & {ks_clean} & {worst} \\\\"
-            )
+    md_lines.append(df_display.to_markdown(index=False, floatfmt=".3f"))
+    md_lines.append("")
+    md_lines.append("**Bold row (325, 5)** is the paper's chosen threshold.")
+    md_lines.append("")
+    md_lines.append("***KS(speed)**: full-hour KS on P14 Off-Peak 15:00-16:00 transfer.")
+    md_lines.append("experiments.md 'KS ≈0.29' is hour-level KS(TT) after Rule-C.")
+    md_lines.append("Paper's stress-test worst-window (15:45-16:00) KS=0.3337.")
     
-    # 修正 (C): 添加口径说明（与 experiments.md 区分）
-    latex_lines.extend([
-        r"\hline",
-        r"\multicolumn{5}{l}{\footnotesize $^*$KS(speed): full-hour KS on P14 Off-Peak 15:00-16:00 transfer.} \\",
-        r"\multicolumn{5}{l}{\footnotesize experiments.md ``KS$\approx$0.29'' is hour-level KS(TT) after Rule-C.} \\",
-        r"\multicolumn{5}{l}{\footnotesize Paper's stress-test worst-window (15:45-16:00) KS=0.3337.} \\",
-        r"\hline",
-        r"\end{tabular}",
-        r"\end{table}",
-    ])
+    md_file = os.path.join(output_dir, "threshold_sensitivity_table.md")
+    with open(md_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(md_lines))
     
-    latex_file = os.path.join(output_dir, "threshold_sensitivity_table.tex")
-    with open(latex_file, "w", encoding="utf-8") as f:
-        f.write("\n".join(latex_lines))
-    
-    print(f"LaTeX 表格已保存: {latex_file}")
+    print(f"Markdown 表格已保存: {md_file}")
 
 
 def main():

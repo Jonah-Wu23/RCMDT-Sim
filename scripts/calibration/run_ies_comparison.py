@@ -522,55 +522,31 @@ def run_ies_comparison(
     return df_results
 
 
-def generate_latex_table(df_results: pd.DataFrame, output_dir: str):
-    """生成 IES 对比 LaTeX 表格（旧版本，已废弃）"""
+def generate_markdown_table(df_results: pd.DataFrame, output_dir: str):
+    """生成 IES 对比 Markdown 表格（旧版本，已废弃）"""
     pass
 
 
-def generate_latex_table_from_logs(df_results: pd.DataFrame, output_dir: str, ks_impr: float, rmse_impr: float):
-    """
-    生成 IES 对比 LaTeX 表格（从 log 数据）
+def generate_markdown_table_from_logs(df_results: pd.DataFrame, output_dir: str, ks_impr: float, rmse_impr: float):
+    """生成 IES 对比 Markdown 表格（从 log 数据）"""
     
-    修正 (D): 添加 Op-L2 口径说明
-    - B4 使用 Op-L2-v0 (moving-only speed)，不是最终 Op-L2-v1.1 (D2D + decontamination)
-    - IES 对比是"算法机制/可复现性"证据，不是最终口径下的主结论
-    """
+    md_lines = ["# IES On/Off Comparison (Peak Hour Calibration)†", ""]
     
-    latex_lines = [
-        r"\begin{table}[htbp]",
-        r"\centering",
-        r"\caption{IES On/Off Comparison (Peak Hour Calibration)$^\dagger$}",
-        r"\label{tab:ies_comparison}",
-        r"\begin{tabular}{l|cc|c}",
-        r"\hline",
-        r"\textbf{Config} & \textbf{KS} & \textbf{RMSE (km/h)} & \textbf{Pass} \\",
-        r"\hline",
-    ]
+    df_display = df_results[['config', 'ks_clean', 'rmse', 'passed']].copy()
+    df_display['passed'] = df_display['passed'].apply(lambda x: '✓' if x else '✗')
+    df_display.columns = ['Config', 'KS', 'RMSE (km/h)', 'Pass']
     
-    for _, row in df_results.iterrows():
-        config = row['config']
-        ks = f"{row['ks_clean']:.3f}" if pd.notna(row['ks_clean']) else "N/A"
-        rmse = f"{row['rmse']:.2f}" if pd.notna(row.get('rmse')) else "N/A"
-        passed = r"\checkmark" if row['passed'] else r"\texttimes"
-        
-        latex_lines.append(f"{config} & {ks} & {rmse} & {passed} \\\\")
+    md_lines.append(df_display.to_markdown(index=False, floatfmt=".3f"))
+    md_lines.append("")
+    md_lines.append(f"**IES improvement**: KS {ks_impr:.1f}%, RMSE {rmse_impr:.1f}%")
+    md_lines.append("")
+    md_lines.append("**†B4 uses Op-L2-v0 (moving-only speed)**. This demonstrates algorithm mechanism, not final Op-L2-v1.1 (D2D+decont.) results.")
     
-    # 修正 (D): 添加 Op-L2 口径说明
-    latex_lines.extend([
-        r"\hline",
-        r"\multicolumn{4}{l}{\footnotesize IES improvement: KS " + f"{ks_impr:.1f}" + r"\%, RMSE " + f"{rmse_impr:.1f}" + r"\%} \\",
-        r"\multicolumn{4}{l}{\footnotesize $^\dagger$B4 uses Op-L2-v0 (moving-only speed). This demonstrates} \\",
-        r"\multicolumn{4}{l}{\footnotesize algorithm mechanism, not final Op-L2-v1.1 (D2D+decont.) results.} \\",
-        r"\hline",
-        r"\end{tabular}",
-        r"\end{table}",
-    ])
+    md_file = os.path.join(output_dir, "ies_comparison_table.md")
+    with open(md_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(md_lines))
     
-    latex_file = os.path.join(output_dir, "ies_comparison_table.tex")
-    with open(latex_file, "w", encoding="utf-8") as f:
-        f.write("\n".join(latex_lines))
-    
-    print(f"    LaTeX 表格已保存: {latex_file}")
+    print(f"    Markdown 表格已保存: {md_file}")
 
 
 def generate_ies_config_latex(output_dir: str):

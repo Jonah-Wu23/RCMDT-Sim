@@ -1,6 +1,6 @@
 # 审稿人回复实验清单
 
-**目标**: 用最小成本补齐审稿人最怀疑的三件事，生成可直接写入 6 页 IEEE 格式的表/图。
+**目标**: 用最小成本补齐审稿人最怀疑的三件事，生成可直接写入论文的表/图。
 
 **语言规范**: 所有输出、思考、任务清单均使用中文。
 
@@ -47,7 +47,7 @@ $^\dagger$ **口径说明**: Worst-15min = max KS over 4 random sub-windows (Rul
 
 **产出文件**: 
 - `data/calibration/ablation/ablation_results.csv`
-- `data/calibration/ablation/ablation_table.tex`
+- `table.md`
 
 ---
 
@@ -81,7 +81,7 @@ $^\dagger$ **口径说明**: Worst-15min = max KS over 4 random sub-windows (Rul
 **产出文件**: 
 - `data/calibration/sensitivity/threshold_sensitivity_results.csv`
 - `data/calibration/sensitivity/threshold_sensitivity_heatmap.png`
-- `data/calibration/sensitivity/threshold_sensitivity_table.tex`
+- `table.md`
 
 ---
 
@@ -118,7 +118,7 @@ $^\dagger$ **口径说明**: Worst-15min = max KS over 4 random sub-windows (Rul
 
 **IES 改进**: KS 3.8%, RMSE 3.3%
 
-**修正 (D)**: Op-L2 口径说明已添加到 LaTeX 表格
+**修正 (D)**: Op-L2 口径说明已补充到表格汇总
 - B4 使用 **Op-L2-v0 (moving-only speed)**，不是最终 Op-L2-v1.1 (D2D+decont.)
 - IES 对比是"算法机制/可复现性"证据，不是最终口径下的主结论
 
@@ -136,7 +136,7 @@ $^\dagger$ **口径说明**: Worst-15min = max KS over 4 random sub-windows (Rul
 **产出文件**: 
 - `data/calibration/ies_comparison/ies_comparison_results.csv`
 - `data/calibration/ies_comparison/ies_config_for_paper.json`
-- `data/calibration/ies_comparison/ies_comparison_table.tex`
+- `table.md`
 
 ---
 
@@ -202,7 +202,7 @@ python scripts/calibration/run_tail_loss_ablation.py --output "data/calibration/
 **产出文件**:
 - `scripts/calibration/run_tail_loss_ablation.py`
 - `data/calibration/tail_loss_ablation_fixed/tail_loss_ablation_results.csv`
-- `data/calibration/tail_loss_ablation_fixed/tail_loss_ablation_table.tex`
+- `table.md`
 
 ---
 
@@ -221,7 +221,7 @@ python scripts/calibration/run_tail_loss_ablation.py --output "data/calibration/
 
 **状态**: [x] 已完成 (概念性对比)
 
-**产出文件**: `data/calibration/ies_comparison/ies_comparison_table.tex`
+**产出文件**: `table.md`
 
 ---
 
@@ -244,13 +244,13 @@ python scripts/calibration/run_tail_loss_ablation.py --output "data/calibration/
 
 **产出文件**: 
 - `data/calibration/temporal_heatmap/temporal_robustness_heatmap.png`
-- `data/calibration/temporal_heatmap/temporal_heatmap_table.tex`
+- `table.md`
 
 ---
 
 ## 执行顺序（已完成）
 
-1. [x] 创建 TODO.md
+1. [x] 创建 experiment_v2.md
 2. [x] 创建消融实验脚本 `run_ablation_study.py`
 3. [x] 创建阈值敏感性脚本 `run_threshold_sensitivity.py`
 4. [x] 创建 IES 对比脚本 `run_ies_comparison.py`
@@ -267,10 +267,10 @@ python scripts/calibration/run_tail_loss_ablation.py --output "data/calibration/
 
 | 日期 | 完成事项 | 备注 |
 |------|----------|------|
-| 2026-01-08 | 创建 TODO.md | 实验清单初始化 |
+| 2026-01-08 | 创建 experiment_v2.md | 实验清单初始化 |
 | 2026-01-08 | 创建 4 个实验脚本 | ablation, sensitivity, ies, heatmap |
 | 2026-01-08 | 运行全部实验 | 结果已保存到 data/calibration/ |
-| 2026-01-08 | 生成 LaTeX 表格 | 可直接用于论文 |
+| 2026-01-08 | 生成表格汇总 | `table.md` |
 | 2026-01-08 | **修正 (A)** | 消融表加 BO 效率列 (16.0% 改进) |
 | 2026-01-08 | **修正 (B)** | worst-15min 统一用 Rule-C cleaned 数据 |
 | 2026-01-08 | **修正 (C)** | 阈值敏感性添加口径说明 |
@@ -284,29 +284,29 @@ python scripts/calibration/run_tail_loss_ablation.py --output "data/calibration/
 ### 消融实验
 - `scripts/calibration/run_ablation_study.py`
 - `data/calibration/ablation/ablation_results.csv`
-- `data/calibration/ablation/ablation_table.tex`
+- `table.md`
 
 ### 阈值敏感性
 - `scripts/calibration/run_threshold_sensitivity.py`
 - `data/calibration/sensitivity/threshold_sensitivity_results.csv`
 - `data/calibration/sensitivity/threshold_sensitivity_heatmap.png`
-- `data/calibration/sensitivity/threshold_sensitivity_table.tex`
+- `table.md`
 
 ### IES 对比 + ES-MDA
 - `scripts/calibration/run_ies_comparison.py`
 - `data/calibration/ies_comparison/ies_config_for_paper.json`
-- `data/calibration/ies_comparison/ies_config_table.tex`
-- `data/calibration/ies_comparison/ies_comparison_table.tex`
+- `table.md`
 
 ### 全时段 Heatmap
 - `scripts/calibration/run_temporal_heatmap.py`
 - `data/calibration/temporal_heatmap/temporal_robustness_heatmap.png`
-- `data/calibration/temporal_heatmap/temporal_heatmap_table.tex`
+- `table.md`
 
 ### Tail-Loss Ablation
 - `scripts/calibration/run_tail_loss_ablation.py`
 - `data/calibration/tail_loss_ablation/tail_loss_ablation_results.csv`
-- `data/calibration/tail_loss_ablation/tail_loss_ablation_table.tex`
 - `data/calibration/tail_loss_ablation/rmse-only_log.csv`
 - `data/calibration/tail_loss_ablation/tail-aware_log.csv`
+- `data/calibration/tail_loss_ablation_fixed/tail_loss_ablation_results.csv`
+- `table.md`
 
