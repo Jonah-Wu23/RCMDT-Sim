@@ -601,6 +601,14 @@ def generate_delta_markdown(df_delta: pd.DataFrame, output_path: Path) -> None:
     md_lines.append("展示 RCMDT/IES 在不同拥堵强度下的改进效果")
     md_lines.append("")
     
+    if len(df_delta) == 0:
+        md_lines.append("（暂无数据：需要同时有 A3 和 A4 的结果才能计算 Delta）")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(md_lines))
+        print(f"\nDelta 表已保存（空）: {output_path}")
+        return
+    
     df_display = df_delta.copy()
     df_display['delta_ks_speed_ci'] = df_display.apply(
         lambda row: f"[{row['delta_ks_speed_ci_low']:.4f}, {row['delta_ks_speed_ci_high']:.4f}]", axis=1
