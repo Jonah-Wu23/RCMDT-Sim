@@ -356,8 +356,12 @@ def build_simulation_vector(
     metric_type = kwargs.get('metric_type', 'speed')
     
     if metric_type == 'traveltime':
-        # 动态导入 TT 模块
+        # 动态导入 TT 模块（使用绝对路径导入）
         try:
+            import sys
+            _calibration_dir = str(Path(__file__).resolve().parent)
+            if _calibration_dir not in sys.path:
+                sys.path.insert(0, _calibration_dir)
             from build_l2_sim_vector_traveltime import build_simulation_vector_tt
             
             # 从 kwargs 提取 tt_mode，默认 'moving'

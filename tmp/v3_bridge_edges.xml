@@ -1,5 +1,0 @@
-<!-- V3 Bridge Edge Patches -->
-    <!-- 68X outbound 6->7, ratio=121.8, direct_dist=13m -->
-    <edge id="bridge_68X_GAP_12" from="3751" to="4551" numLanes="1" speed="5.56" priority="1" allow="bus" shape="5872.60,20884.66 5881.12,20875.48"/>
-    <!-- 68X inbound 1->2, ratio=6.0, direct_dist=397m -->
-    <edge id="bridge_68X_GAP_13" from="4208" to="6968" numLanes="1" speed="5.56" priority="1" allow="bus" shape="22600.91,7466.22 22415.25,7816.74"/>

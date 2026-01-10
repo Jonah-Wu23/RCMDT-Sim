@@ -25,3 +25,6 @@ __pycache__/
 plots/_smoke/
 
 DAPPER-master
+
+# Archive folder (archived legacy files)
+archive/

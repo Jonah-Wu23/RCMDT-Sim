@@ -1,5 +1,0 @@
-<!-- V1 Bridge Edge Patches -->
-    <!-- 68X outbound 30→31, node_dist≈150m -->
-    <edge id="bridge_68X_GAP_11" from="12189" to="4209" numLanes="1" speed="5.56" priority="1" allow="bus" shape="22561.04,7660.60 22590.06,7513.24"/>
-    <!-- 960 outbound 2→3, node_dist≈101m -->
-    <edge id="bridge_960_GAP_13" from="cluster_3909_6288" to="8899" numLanes="1" speed="5.56" priority="1" allow="bus" shape="2566.17,17771.52 2483.12,17714.67"/>

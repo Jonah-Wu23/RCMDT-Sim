@@ -1,5 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<trips>
-    <vType id="kmb_double_decker" vClass="bus" length="12.00" width="2.55" maxSpeed="20.00" guiShape="bus" color="red" personCapacity="137" />
-    <trip id="VIA_68X_outbound" type="kmb_double_decker" depart="0" from="260430" to="105735_rev" via="97403 96300 97070 97407 272584 97153_rev 95649 95425 95598 95592 261287 8732 8663 8685 8000 106606 106580 107083 106268 106031 107450 106972 106831 105734" />
-</trips>

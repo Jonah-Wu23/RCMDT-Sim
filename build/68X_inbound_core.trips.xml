@@ -1,5 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<trips>
-    <vType id="kmb_double_decker" vClass="bus" length="12.00" width="2.55" maxSpeed="20.00" guiShape="bus" />
-    <trip id="CORE_68X_inbound" type="kmb_double_decker" depart="0" from="105735_rev" to="8044_rev" via="105653 106831_rev 105817 106985 106073_rev 105786_rev 105335_rev 107083 106580 106597_rev 272309 9023_rev" />
-</trips>

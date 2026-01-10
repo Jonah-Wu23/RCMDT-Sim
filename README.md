@@ -1,6 +1,6 @@
 # RCMDT: Observation-Operator-Aware Calibration of Mobility Digital Twins
 
-Codebase for an IEEE SMC 2026 paper draft on robust calibration of bus corridor digital twins. The current paper storyline lives in `docs/paper_outline.md`.
+Codebase for an IEEE SMC 2026 paper on robust calibration of bus corridor digital twins.
 
 ## What This Project Claims
 
@@ -13,8 +13,6 @@ This repo implements and evaluates **RCMDT**, a hierarchical calibration loop (B
 
 ## Paper Alignment
 
-- Paper outline: `docs/paper_outline.md`
-- Experiment registry + run notes: `docs/experiments.md`
 - Data/compliance notes: `DATA.md`
 - Main P14 figures (already generated): `plots/P14_ghost_audit.png`, `plots/P14_robustness_cdf.png`
 
@@ -63,7 +61,6 @@ python scripts/visualization/plot_dwell_distribution.py
 
 - L1 Bayesian optimization (outer loop): `scripts/calibration/`
 - L2 IES assimilation (inner loop): `scripts/calibration/`
-- For the authoritative run settings and what each label means (B1–P14), follow `docs/experiments.md`.
 
 ## Data Introduction
 
@@ -72,4 +69,4 @@ The data are private. The transit data files are available at folder `sim/data/`
 ## Troubleshooting
 
 - SUMO outputs empty/small: check `sumo/output/*.xml` sizes and `sumo/output/*.log` logs.
-- P14 “raw” K-S is high (~0.5+): this is expected before observation operator audit / regime separation (see `plots/P14_ghost_audit.png` and `docs/paper_outline.md`).
+- P14 "raw" K-S is high (~0.5+): this is expected before observation operator audit / regime separation (see `plots/P14_ghost_audit.png`).

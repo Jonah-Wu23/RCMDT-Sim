@@ -320,10 +320,13 @@ def load_sim_stopinfo(filepath: str) -> pd.DataFrame:
     
     records = []
     for stop in root.findall('.//stopinfo'):
+        arrival_str = stop.get('arrival')
+        arrival = float(arrival_str) if arrival_str else float(stop.get('started', 0))
         records.append({
             'vehicle_id': stop.get('id'),
             'stop_id': stop.get('busStop'),
-            'arrival': float(stop.get('started', 0)),
+            'arrival': arrival,
+            'started': float(stop.get('started', 0)),
             'departure': float(stop.get('ended', 0)),
             'duration': float(stop.get('duration', 0))
         })
@@ -357,10 +360,14 @@ def load_dist_mapping(filepath: str) -> Dict[Tuple[str, str], float]:
 
 def compute_sim_link_data(
     stopinfo_xml: str,
-    dist_csv: str
+    dist_csv: str,
+    tt_mode: str = 'door'
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     从仿真输出计算链路速度和行程时间
+    
+    Args:
+        tt_mode: 'door' (arrival-arrival) 或 'moving' (started-departure)
     
     Returns:
         speeds: 链路速度数组 (km/h)
@@ -386,8 +393,16 @@ def compute_sim_link_data(
         for i in range(len(veh_data) - 1):
             from_stop = str(veh_data.loc[i, "stop_id"])
             to_stop = str(veh_data.loc[i + 1, "stop_id"])
-            departure = float(veh_data.loc[i, "departure"])
-            arrival = float(veh_data.loc[i + 1, "arrival"])
+            
+            if tt_mode == 'door':
+                # door-to-door: 下一站到达 - 当前站到达
+                departure = float(veh_data.loc[i, "arrival"])
+                arrival = float(veh_data.loc[i + 1, "arrival"])
+            else:
+                # moving-only: 下一站开始(started) - 当前站离开(departure)
+                departure = float(veh_data.loc[i, "departure"])
+                arrival = float(veh_data.loc[i + 1, "started"])
+            
             travel_time_s = arrival - departure
             
             if travel_time_s <= 0:
@@ -750,7 +765,8 @@ def compute_metrics_v4(
     audit_config: Optional[AuditConfig] = None,
     scenario: str = "off_peak",
     route: str = "",
-    period: str = ""
+    period: str = "",
+    tt_mode: str = "door"
 ) -> MetricsV4Result:
     """
     Protocol v4 完整评估流程
@@ -763,6 +779,7 @@ def compute_metrics_v4(
         scenario: 场景名称
         route: 路由名称
         period: 时段名称
+        tt_mode: 'door' (arrival-arrival) 或 'moving' (started-departure)
     
     Returns:
         MetricsV4Result
@@ -788,7 +805,7 @@ def compute_metrics_v4(
     if isinstance(sim_data, str):
         if dist_file is None:
             dist_file = str(PROJECT_ROOT / "data" / "processed" / "kmb_route_stop_dist.csv")
-        sim_speeds, sim_tt, sim_timestamps = compute_sim_link_data(sim_data, dist_file)
+        sim_speeds, sim_tt, sim_timestamps = compute_sim_link_data(sim_data, dist_file, tt_mode=tt_mode)
     else:
         sim_speeds, sim_tt, sim_timestamps = sim_data
     

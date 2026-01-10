@@ -1,5 +1,0 @@
-<!-- V3 Bridge Connection Patches -->
-    <connection from="97407" to="bridge_68X_GAP_12" fromLane="0" toLane="0"/>
-    <connection from="bridge_68X_GAP_12" to="96273_rev" fromLane="0" toLane="0"/>
-    <connection from="105735_rev" to="bridge_68X_GAP_13" fromLane="0" toLane="0"/>
-    <connection from="bridge_68X_GAP_13" to="105653_rev" fromLane="0" toLane="0"/>

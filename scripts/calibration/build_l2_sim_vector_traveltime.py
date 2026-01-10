@@ -118,13 +118,10 @@ def parse_stopinfo_xml(stopinfo_path: str, stop_mapping: dict,
             
             # travel_time 计算
             if tt_mode == 'door':
-                # door-to-door: 下一站到达 - 当前站到达 (含当前站停站、行程、下一站排队)
-                # 注：sumo stopinfo 'arrival' 属性可能缺失，需 fallback 到 'started'
-                arrival_next = next_stop.get('arrival', next_stop['started'])
-                arrival_curr = curr_stop.get('arrival', curr_stop['started'])
-                travel_time = arrival_next - arrival_curr
+                # door-to-door: 下一站离开 - 当前站离开 (含当前站停站 + 行驶 + 下一站停站)
+                travel_time = next_stop['ended'] - curr_stop['ended']
             else:
-                # moving-only (default): 下一站到达(started) - 当前站离开(ended)
+                # moving-only: 下一站到达(started) - 当前站离开(ended) = 纯行驶时间
                 travel_time = next_stop['started'] - curr_stop['ended']
 
             # 规则 C: 时间窗口过滤 (基于 next_stop.started)

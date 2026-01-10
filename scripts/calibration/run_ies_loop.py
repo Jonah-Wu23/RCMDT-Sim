@@ -104,9 +104,9 @@ class IESLoop:
         cyy_nugget_ratio: float = 0.05,  # Cyy nugget 正则化比率
         adaptive_damping: bool = True,  # 自适应阻尼（clip 后降低 β）
         obs_var_floor: float = 1.0,  # obs_var 下限 (km/h)^2
-        t_min: float = 61200.0,  # 时间窗起始 (17:00)
-        t_max: float = 64800.0,   # 时间窗结束 (18:00)
-        tt_mode: str = 'moving',  # T Mode: moving vs door
+        t_min: float = 0.0,  # 时间窗起始 (公交车 depart=0)
+        t_max: float = 3600.0,   # 时间窗结束 (行程约 1 小时)
+        tt_mode: str = 'door',  # door-to-door 模式（含停站时间），与观测向量同口径
         net_file: str = None  # 自定义网络文件路径
     ):
         self.root = Path(project_root)
@@ -262,9 +262,14 @@ class IESLoop:
         obs_path_corridor = self.root / "data" / "calibration" / "l2_observation_vector_corridor.csv"
         obs_path_full = self.root / "data" / "calibration" / "l2_observation_vector.csv"
         
-        if obs_path_m11.exists():
+        # 优先使用修复后的 _drive 版本
+        obs_path_m11_drive = self.root / "data" / "calibration" / "l2_observation_vector_corridor_M11_drive.csv"
+        if obs_path_m11_drive.exists():
+            obs_path = obs_path_m11_drive
+            print(f"[IES] 使用 M11_drive 观测向量 (剔除停站时间): {obs_path}")
+        elif obs_path_m11.exists():
             obs_path = obs_path_m11
-            print(f"[IES] 使用 M11 观测向量 (11点正式口径): {obs_path}")
+            print(f"[WARN] 使用原始 M11 观测向量（含停站时间，口径不一致）: {obs_path}")
         elif obs_path_corridor.exists():
             obs_path = obs_path_corridor
             print(f"[IES] 使用 corridor 观测向量: {obs_path}")
@@ -473,10 +478,10 @@ class IESLoop:
         ET.SubElement(inp, 'route-files').set('value', f"{self.bus_route},{bg_route_path}")
         ET.SubElement(inp, 'additional-files').set('value', str(self.bus_stops))
         
-        # time
+        # time - 从0开始运行完整仿真，时间窗只用于数据提取
         time_elem = ET.SubElement(config, 'time')
         ET.SubElement(time_elem, 'begin').set('value', '0')
-        ET.SubElement(time_elem, 'end').set('value', '3600')
+        ET.SubElement(time_elem, 'end').set('value', str(int(self.t_max + 300)))
         
         # processing
         proc = ET.SubElement(config, 'processing')
@@ -516,7 +521,7 @@ class IESLoop:
         edgedata.set('id', 'ies_edgedata')
         edgedata.set('file', output_path)
         edgedata.set('begin', '0')
-        edgedata.set('end', '3600')
+        edgedata.set('end', str(int(self.t_max + 300)))
         edgedata.set('freq', '3600')  # 整个时段一个 interval
         # 关键修复：只统计公交车的速度（而不是全交通流）
         edgedata.set('vTypes', 'kmb_double_decker')
@@ -625,8 +630,8 @@ class IESLoop:
         Returns:
             (edgedata_paths, insertion_rates)
         """
-        # 限制最大并行度为 2 (适应 16G 内存)
-        max_workers = min(2, self.ensemble_size)
+        # 并行度可调（默认 5）
+        max_workers = min(5, self.ensemble_size)
         print(f"[IES] 启动并行仿真: {len(configs)} 个实例, {max_workers} 并行度")
         
         results = [(None, 0.0)] * len(configs)

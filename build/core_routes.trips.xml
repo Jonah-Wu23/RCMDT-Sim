@@ -1,8 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<trips>
-    <vType id="kmb_double_decker" vClass="bus" length="12.00" width="2.55" maxSpeed="20.00" guiShape="bus" color="red" personCapacity="137" />
-    <trip id="core_68X_inbound" type="kmb_double_decker" depart="0" from="105735_rev" to="8044_rev" via="105653 106831 105817 106985 106073_rev 105786_rev 105335_rev 107083 106580 106597_rev 272309 9023_rev" />
-    <trip id="core_68X_outbound" type="kmb_double_decker" depart="0" from="8663" to="105735_rev" via="8685 8000 106606 106580 107083 106268 106031 107450 106972 106831 105734" />
-    <trip id="core_960_inbound" type="kmb_double_decker" depart="0" from="4287_rev" to="261296" via="5291 2731 4939 165041 1305 115545 4833" />
-    <trip id="core_960_outbound" type="kmb_double_decker" depart="0" from="106944_rev" to="4287" via="2468_rev 513 2480 2448 4202_rev 3895" />
-</trips>
