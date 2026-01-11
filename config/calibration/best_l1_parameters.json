@@ -1,0 +1,27 @@
+{
+    "experiment": "L1 Micro-Calibration B2 (Single Surrogate Kriging)",
+    "date": "2025-12-21",
+    "source_log": "data/calibration/B2_log.csv",
+    "best_iteration": 24,
+    "type": "bo",
+    "objective": {
+        "target_route": "68X",
+        "anchor_route": "960",
+        "anchor_threshold": 350.0
+    },
+    "best_parameters": {
+        "t_board": 1.2719,
+        "t_fixed": 12.1538,
+        "tau": 1.0575,
+        "sigma": 0.5537,
+        "minGap": 1.4535,
+        "accel": 1.4952,
+        "decel": 3.8295
+    },
+    "performance": {
+        "combined_loss": 148.20,
+        "rmse_68x": 148.20,
+        "rmse_960": 329.64
+    },
+    "notes": "B2 baseline result: Single Kriging surrogate with constraint-based objective. This parameter set is FROZEN for L2 calibration."
+}
