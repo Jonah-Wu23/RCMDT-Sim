@@ -192,7 +192,7 @@ def plot_combined_heatmap(
     ax1.set_yticklabels([f"{t}" for t in T_STAR_GRID])
     ax1.set_xlabel(r'$v^*$ (km/h)')
     ax1.set_ylabel(r'$T^*$ (s)')
-    ax1.set_title('(a) Clean Samples ($n_{real}$)', fontweight='bold')
+    ax1.text(0.02, 0.95, '(a)', transform=ax1.transAxes, fontweight='bold', va='top')
     
     for i in range(n_t):
         for j in range(n_v):
@@ -215,7 +215,7 @@ def plot_combined_heatmap(
     ax2.set_yticklabels([f"{t}" for t in T_STAR_GRID])
     ax2.set_xlabel(r'$v^*$ (km/h)')
     ax2.set_ylabel(r'$T^*$ (s)')
-    ax2.set_title('(b) KS(speed) Full-hour', fontweight='bold')
+    ax2.text(0.02, 0.95, '(b)', transform=ax2.transAxes, fontweight='bold', va='top')
     
     for i in range(n_t):
         for j in range(n_v):

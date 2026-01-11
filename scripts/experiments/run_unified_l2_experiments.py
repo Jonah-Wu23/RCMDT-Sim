@@ -41,6 +41,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 sys.path.insert(0, str(PROJECT_ROOT / "scripts" / "calibration"))
 
+from build_l2_sim_vector_traveltime import build_simulation_vector_tt
+
 # =============================================================================
 # 论文L2口径配置 (严格复用)
 # =============================================================================
@@ -66,7 +68,9 @@ L2_PROTOCOL = {
     # 场景
     "scenario": "pm_peak",
     "hkt_time": "17:00-18:00",
-    "tt_mode": "moving"
+    "tt_mode": "moving",
+    "t_min": 0.0,
+    "t_max": 3600.0
 }
 
 # 场景配置
@@ -180,7 +184,65 @@ def create_vtype_xml(bus_params: Dict, l2_params: Optional[Dict], output_path: P
         f.write(content)
 
 
-def create_sumo_config(run_dir: Path, seed: int, capacity_factor: float = 1.0) -> Path:
+def create_bus_route_xml(bus_params: Dict[str, float], input_path: Path, output_path: Path) -> Path:
+    """创建带有公交参数的路由文件（覆盖 vType）"""
+    tree = ET.parse(input_path)
+    root = tree.getroot()
+    
+    bus_vtype = None
+    for vtype in root.findall('vType'):
+        if vtype.get('id') == 'kmb_double_decker':
+            bus_vtype = vtype
+            break
+    
+    if bus_vtype is None:
+        raise ValueError(f"Bus vType not found in {input_path}")
+    
+    bus_vtype.set('accel', f"{bus_params['accel']:.4f}")
+    bus_vtype.set('decel', f"{bus_params['decel']:.4f}")
+    bus_vtype.set('sigma', f"{bus_params['sigma']:.4f}")
+    bus_vtype.set('tau', f"{bus_params['tau']:.4f}")
+    bus_vtype.set('minGap', f"{bus_params['minGap']:.4f}")
+    
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    tree.write(str(output_path), encoding='utf-8', xml_declaration=True)
+    return output_path
+
+
+def create_bg_route_xml(l2_params: Optional[Dict[str, float]], input_path: Path, output_path: Path) -> Path:
+    """创建带有 L2 参数的背景路由文件（覆盖 vType）"""
+    if not l2_params:
+        return input_path
+    
+    tree = ET.parse(input_path)
+    root = tree.getroot()
+    
+    bg_vtype = None
+    for vtype in root.findall('vType'):
+        if vtype.get('id') in ['bg_p5', 'passenger', 'car', 'background']:
+            bg_vtype = vtype
+            break
+    
+    if bg_vtype is None:
+        raise ValueError(f"Background vType not found in {input_path}")
+    
+    if 'minGap_background' in l2_params:
+        bg_vtype.set('minGap', f"{l2_params['minGap_background']:.4f}")
+    if 'impatience' in l2_params:
+        bg_vtype.set('impatience', f"{l2_params['impatience']:.4f}")
+    
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    tree.write(str(output_path), encoding='utf-8', xml_declaration=True)
+    return output_path
+
+
+def create_sumo_config(
+    run_dir: Path,
+    seed: int,
+    bus_routes: Path,
+    bg_routes: Path,
+    capacity_factor: float = 1.0
+) -> Path:
     """创建SUMO配置文件"""
     
     config_path = run_dir / "experiment.sumocfg"
@@ -189,8 +251,8 @@ def create_sumo_config(run_dir: Path, seed: int, capacity_factor: float = 1.0) -
 <configuration>
     <input>
         <net-file value="{SCENARIO_CONFIG['network']}"/>
-        <route-files value="{SCENARIO_CONFIG['bus_routes']},{SCENARIO_CONFIG['bg_routes']}"/>
-        <additional-files value="{SCENARIO_CONFIG['bus_stops']},{run_dir / 'vtype.add.xml'}"/>
+        <route-files value="{bus_routes},{bg_routes}"/>
+        <additional-files value="{SCENARIO_CONFIG['bus_stops']}"/>
     </input>
     <output>
         <stop-output value="{run_dir / 'stopinfo.xml'}"/>
@@ -234,39 +296,33 @@ def run_sumo(config_path: Path, capacity_factor: float = 1.0) -> bool:
 def extract_m11_speeds(stopinfo_path: Path) -> np.ndarray:
     """从stopinfo.xml提取M11走廊速度 (11维)"""
     
-    obs_df = pd.read_csv(L2_PROTOCOL["observation_file"])
+    if not stopinfo_path.exists():
+        return np.full(L2_PROTOCOL["observation_dim"], np.nan)
     
-    # 解析stopinfo
     try:
-        tree = ET.parse(stopinfo_path)
-        root = tree.getroot()
-    except:
-        return np.full(11, np.nan)
+        sim_df = build_simulation_vector_tt(
+            stopinfo_path=str(stopinfo_path),
+            observation_csv=str(L2_PROTOCOL["observation_file"]),
+            route_stop_csv=str(SCENARIO_CONFIG["dist_csv"]),
+            output_csv=None,
+            max_gap_seconds=1800.0,
+            verbose=False,
+            tmin=L2_PROTOCOL["t_min"],
+            tmax=L2_PROTOCOL["t_max"],
+            tt_mode=L2_PROTOCOL["tt_mode"]
+        )
+    except Exception as e:
+        print(f"[WARN] M11速度提取失败: {e}")
+        return np.full(L2_PROTOCOL["observation_dim"], np.nan)
     
-    # 提取各link的速度
-    speeds = []
-    for _, row in obs_df.iterrows():
-        route = row['route']
-        from_seq = row['from_seq']
-        to_seq = row['to_seq']
-        dist_m = row['dist_m']
-        
-        # 从stopinfo提取travel time
-        link_tts = []
-        for stop in root.findall('.//stopinfo'):
-            # 匹配route和sequence
-            try:
-                trip_id = stop.get('tripId', '')
-                if route in trip_id:
-                    # 简化：使用平均速度
-                    pass
-            except:
-                continue
-        
-        # 使用观测值作为占位（真实实现需要从stopinfo提取）
-        speeds.append(row['mean_speed_kmh'])
+    if "sim_speed_kmh" not in sim_df.columns:
+        return np.full(L2_PROTOCOL["observation_dim"], np.nan)
     
-    return np.array(speeds)
+    speeds = sim_df["sim_speed_kmh"].to_numpy()
+    if len(speeds) != L2_PROTOCOL["observation_dim"]:
+        return np.full(L2_PROTOCOL["observation_dim"], np.nan)
+    
+    return speeds
 
 
 def compute_ks_m11(sim_speeds: np.ndarray, obs_speeds: np.ndarray) -> float:
@@ -290,13 +346,23 @@ def run_single_ablation(config_id: str, config: AblationConfig, seed: int,
     run_dir = output_dir / config_id / f"seed{seed}"
     run_dir.mkdir(parents=True, exist_ok=True)
     
-    # 创建vType
     l2_params = config.l2_params if config.use_l2 else None
-    create_vtype_xml(config.bus_params, l2_params, run_dir / "vtype.add.xml")
+    
+    # 创建带参数的路由文件
+    bus_routes_path = create_bus_route_xml(
+        config.bus_params,
+        SCENARIO_CONFIG["bus_routes"],
+        run_dir / "bus_routes.rou.xml"
+    )
+    bg_routes_path = create_bg_route_xml(
+        l2_params,
+        SCENARIO_CONFIG["bg_routes"],
+        run_dir / "bg_routes.rou.xml"
+    )
     
     # 创建SUMO配置
     capacity_factor = config.l2_params.get('capacityFactor', 1.0) if config.use_l2 and config.l2_params else 1.0
-    config_path = create_sumo_config(run_dir, seed, capacity_factor)
+    config_path = create_sumo_config(run_dir, seed, bus_routes_path, bg_routes_path, capacity_factor)
     
     # 运行SUMO
     success = run_sumo(config_path, capacity_factor)
