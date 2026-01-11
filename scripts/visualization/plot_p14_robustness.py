@@ -217,13 +217,18 @@ def plot_robustness_cdf(
     ks_raw, _ = ks_2samp(raw_speeds, sim_speeds)
     ks_clean, _ = ks_2samp(clean_speeds, sim_speeds)
     
-    lines = [f"KS(raw)={ks_raw:.2f}", f"KS(clean)={ks_clean:.4f}"]
+    # Calculate improvement percentage
+    improvement_pct = ((ks_raw - ks_clean) / ks_raw) * 100
+    
+    lines = [
+        f"KS(raw)={ks_raw:.2f}",
+        f"KS(clean)={ks_clean:.4f} (Improved {improvement_pct:.0f}%)"
+    ]
     if (not fixture) and (worst_window_ks is not None):
         lines.append(f"Worst 15-min window: KS={worst_window_ks:.4f}")
     text = "\n".join(lines)
-    # Move text to bottom right (above legend) to avoid Raw curve overlap in top-left
-    # User requested shift to upper-right relative to previous (0.40, 0.20)
-    ax.text(0.50, 0.35, text, transform=ax.transAxes, fontsize=7, 
+    # Adjust text position to avoid boundary overflow
+    ax.text(0.45, 0.35, text, transform=ax.transAxes, fontsize=7, 
             bbox=dict(facecolor='white', alpha=0.9, edgecolor='gray', boxstyle='round,pad=0.5'))
     if fixture:
         _add_fixture_watermark(ax)
