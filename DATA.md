@@ -1,7 +1,5 @@
 # Data & Compliance
 
-This repository contains code to reproduce the *methodology and evidence chain* described in `docs/paper_outline.md`.
-
 ## What “Real Data” Means Here
 
 In this project, “real” observations primarily refer to **door-to-door (D2D) stop-to-stop link statistics** derived from operational sources (e.g., ETA / stop event feeds). These observations can be contaminated by **non-transport regimes** (schedule adherence / holding / layover) and therefore require an **Observation Operator Audit** before being used as validation evidence.
