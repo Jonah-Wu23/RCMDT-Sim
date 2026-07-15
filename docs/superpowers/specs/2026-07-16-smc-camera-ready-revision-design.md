@@ -167,7 +167,7 @@ Metric definitions are fixed:
 - `worst-15-min KS` is the maximum valid K-S statistic over 15-minute half-open windows `[start, start+900 s)` advanced every 60 seconds within the one-hour window.
 - A full-window K-S value requires at least 20 real and 20 simulated events. A subwindow requires at least five events from each source. Missing minima produce a failed metric, not a zero.
 - `retention rate = n_clean_link_keys / n_eligible_raw_link_keys`, where eligibility includes the declared route, direction, time window, and positive distance/travel-time requirements.
-- `IRN contradiction rate` is the proportion of matched D2D link-window records with median effective speed below 5 km/h whose matched IRN median speed is at least 5 km/h. Report its numerator, denominator, and unmatched count; do not treat it as a classification-accuracy measure.
+- `IRN contradiction rate` is computed separately for each audit method on that method's flagged records: the numerator is the number of IRN-matched flagged D2D link-window records with median effective speed below 5 km/h and matched IRN median speed at least 5 km/h; the denominator is all IRN-matched records flagged by that method. Report numerator, denominator, and unmatched flagged count; do not treat it as a classification-accuracy measure.
 - P-values may be reported as diagnostic values but cannot replace `D` or be used to label a model as passed/failed in the main comparison.
 
 Two hashes serve different purposes:
@@ -189,9 +189,9 @@ IQR may be included as a second statistical baseline when space and time permit.
 
 All E1 methods operate on one aggregated record per `(route, bound, from_seq, to_seq, one-hour window)` after common eligibility filtering: declared routes/directions, positive time and distance, and `distance <= 1500 m`. They are fitted jointly across eligible routes and directions on the development split.
 
-- **MAD:** fit median and `1.4826 * MAD` for `log1p(tt_median)` and `log1p(speed_median)`. Replace a zero scale with the smallest positive scale observed for that feature. Flag when the robust travel-time score is greater than `3.5` and the robust speed score is less than `-3.5`.
+- **MAD:** fit median and `1.4826 * MAD` for `log1p(tt_median)` and `log1p(speed_median)`. When a feature's MAD scale is zero, use `IQR / 1.349` from the same development feature; when that is also zero, assign robust score zero for that feature to every record. Flag when the robust travel-time score is greater than `3.5` and the robust speed score is less than `-3.5`.
 - **Isolation Forest:** use features `log1p(tt_median)`, `log1p(speed_median)`, and `log1p(dist_m)`, standardized by development medians and MAD scales. Use `n_estimators=200`, `max_samples='auto'`, `contamination='auto'`, and `random_state=42`. Flag an anomaly only when it is also above the development median travel time and below the development median speed.
-- **Quantile fallback:** fit development `Q95(tt_median)` and `Q05(speed_median)` and flag records satisfying both tail conditions.
+- **Quantile fallback:** fit development `Q95(tt_median)` and `Q05(speed_median)` with NumPy's linear interpolation convention (`method='linear'`). Flag records with `tt_median >= Q95` and `speed_median <= Q05`.
 
 Each method converts record decisions to retained link keys by excluding flagged keys. Fitted statistics, model serialization hash, package version, and retained/flagged keys are saved in the audit manifest.
 
