@@ -132,7 +132,7 @@ Use one Rule C definition everywhere:
 - `v_eff < 5 km/h`
 - `distance <= 1500 m`
 
-Thresholds are selected using the training data and then frozen for cross-day evaluation. IRN remains an external plausibility check and does not tune the rule on the evaluation data.
+The thresholds are predeclared protocol constants recorded in the repository before the camera-ready comparison. They express a long-duration, near-stationary, short-link condition and are not selected by minimizing K-S on either split. Development-split sensitivity analysis tests their neighborhood but cannot change the selected values. IRN remains an external plausibility check and does not tune the rule.
 
 ## 7. Experiment Design
 
@@ -175,7 +175,7 @@ Two hashes serve different purposes:
 - `provenance_hash` covers the complete canonical manifest, input content hashes, software versions, seed, run ID, and schema version.
 - `simulation_effective_hash` covers only canonical sorted JSON for input content hashes, bus parameters, background parameters, observation semantic, simulator settings, and SUMO seed. Timestamps, output paths, and run IDs are excluded.
 
-The validator also records component hashes for `bus_parameters`, `background_parameters`, `observation_semantic`, and `simulator_inputs`. Expected A0-A4 differences are asserted against these component hashes.
+The validator also records component hashes for `bus_parameters`, `background_parameters`, `observation_semantic`, and `simulator_inputs`, plus explicit mechanism fields `l1_enabled` and `l2_enabled`. It verifies the A0-A4 mechanism matrix in Section 7.3 and the expected equalities listed there. It does not require final numerical parameter hashes to differ, because a calibrated value may legitimately coincide with a baseline value.
 
 ### 7.2 E1: Observation-Rule Comparison
 
@@ -186,6 +186,14 @@ Compare at minimum:
 - Isolation Forest as a data-adaptive baseline.
 
 IQR may be included as a second statistical baseline when space and time permit. If Isolation Forest fails because of sample size or implementation instability, replace it with a training-fitted empirical quantile rule using predeclared 95th travel-time and 5th speed percentiles. At least one adaptive baseline must remain.
+
+All E1 methods operate on one aggregated record per `(route, bound, from_seq, to_seq, one-hour window)` after common eligibility filtering: declared routes/directions, positive time and distance, and `distance <= 1500 m`. They are fitted jointly across eligible routes and directions on the development split.
+
+- **MAD:** fit median and `1.4826 * MAD` for `log1p(tt_median)` and `log1p(speed_median)`. Replace a zero scale with the smallest positive scale observed for that feature. Flag when the robust travel-time score is greater than `3.5` and the robust speed score is less than `-3.5`.
+- **Isolation Forest:** use features `log1p(tt_median)`, `log1p(speed_median)`, and `log1p(dist_m)`, standardized by development medians and MAD scales. Use `n_estimators=200`, `max_samples='auto'`, `contamination='auto'`, and `random_state=42`. Flag an anomaly only when it is also above the development median travel time and below the development median speed.
+- **Quantile fallback:** fit development `Q95(tt_median)` and `Q05(speed_median)` and flag records satisfying both tail conditions.
+
+Each method converts record decisions to retained link keys by excluding flagged keys. Fitted statistics, model serialization hash, package version, and retained/flagged keys are saved in the audit manifest.
 
 Fit MAD, Isolation Forest, or the quantile fallback on the development split only. Freeze fitted values and model state before evaluating the cross-day split. Rule C thresholds are predeclared physical defaults; the development sensitivity grid is a robustness analysis and does not retune Rule C after inspecting cross-day results. Report retention rate, full-window K-S, worst-15-minute K-S, and IRN contradiction rate. Since semantic ground-truth labels are unavailable, the result supports stability and interpretability, not classification accuracy or universal superiority.
 
@@ -221,6 +229,17 @@ The final table reports the fixed real event count once per split. Simulated eve
 
 The output validator fails when two configurations expected to differ share the relevant component hash, when required output files are absent, or when mandatory metrics are null.
 
+The deterministic mechanism and equality checks are:
+
+- A0: `l1_enabled=false`, `l2_enabled=false`; A1: `true,false`; A2: `false,true`; A3 and A4: `true,true`.
+- A0 and A2 have equal baseline bus-parameter hashes.
+- A1, A3, and A4 have equal frozen L1 bus-parameter hashes for a given seed.
+- A0 and A1 have equal baseline background-parameter hashes.
+- A2, A3, and A4 have equal L2 prior and ensemble-seed hashes.
+- A3 has `observation_semantic=raw_d2d`; A2 and A4 have `observation_semantic=moving_only`.
+
+Final background-parameter hashes may coincide and do not by themselves fail validation. A configuration fails when its declared mechanism fields, frozen-input equalities, or observation semantic violate this matrix.
+
 ### 7.4 E3: Equal-Budget BO Versus LHS
 
 For each optimization seed:
@@ -231,6 +250,8 @@ For each optimization seed:
 - Both methods therefore use 40 simulations.
 
 Report cumulative best objective versus evaluation count, final best objective, and evaluations needed to reach a predeclared target. The normal design uses five optimization seeds. The target is fixed separately for each shared initial design before the additional 25 evaluations as `0.95 * best feasible objective among the 15 shared initial points`; a method that never reaches it is recorded as `not reached`. Retain all 40 evaluations per method; do not compare different budget sizes.
+
+When a shared 15-point initial design contains no feasible candidate, that optimization seed is structurally invalid and stops before the additional evaluations. It is not assigned a post hoc target and is not replaced by an unplanned seed. The final BO-LHS comparison uses the common valid seed set under the five-target/three-minimum rule; fewer than three valid seeds block the BO-LHS evidence.
 
 ### 7.5 E4: Cross-Day Transfer
 
@@ -388,7 +409,7 @@ The manuscript is rejected for submission when:
 
 - Run the existing P14 smoke workflow with fixtures.
 - Add focused checks for configuration hashing, non-null metric schemas, strict Rule C behavior, and transfer-field completeness.
-- Verify five valid seeds for the main ablation and at least three for BO-LHS.
+- Verify five common valid seeds for the main ablation and BO-LHS under the normal release. A documented degraded release may use exactly three common seeds for either experiment under Section 11; four valid common seeds are reported as four rather than discarded. Fewer than three blocks the corresponding evidence.
 - Regenerate all paper artifacts from final outputs.
 - Extract the final DOCX text and search for obsolete symbols, wording, numbers, and placeholders.
 - Render the final DOCX to PDF and inspect all six pages visually.
