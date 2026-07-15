@@ -116,6 +116,14 @@ The executable contract is:
 
 One L1 candidate evaluation uses one deterministic SUMO seed derived from `(optimization_seed, evaluation_index)`. BO and continued LHS use the same seed schedule at matching evaluation indices. The paper reports optimization performance across optimization seeds; it does not pool stop errors from different candidates or seeds into one Equation (2) value.
 
+The scalar candidate score is fixed as follows. Compute the 68X composite loss
+
+`JL1_68X = RMSE(e) + 1.0 * (MAE(e) + 0.5 * std(abs(e))) + 0.3 * Q0.9(abs(e))`.
+
+Compute `RMSE_960` with the same cumulative-time matching contract. A candidate is feasible when both routes have at least three matched downstream stops and `RMSE_960 <= 350 s`. The score supplied to BO or used to rank LHS is `JL1_68X` for a feasible candidate and `2000 + 10 * (RMSE_960 - 350)` for a valid constraint-violating candidate. Missing or malformed simulation output is an infrastructure failure and triggers the retry policy; it is not inserted into the surrogate as a numerical observation. A candidate that remains unevaluable after retries fails that optimization seed.
+
+The 40-evaluation budget counts successful candidate evaluations. Deterministic infrastructure retries do not consume additional budget. The final paper reports `JL1_68X`, its four components, `RMSE_960`, and feasibility for the selected candidate. The earlier RMSE-only B2 score cannot be relabeled as this composite objective.
+
 ### 6.4 Observation Audit
 
 Use one Rule C definition everywhere:
@@ -181,6 +189,10 @@ IQR may be included as a second statistical baseline when space and time permit.
 
 Fit MAD, Isolation Forest, or the quantile fallback on the development split only. Freeze fitted values and model state before evaluating the cross-day split. Rule C thresholds are predeclared physical defaults; the development sensitivity grid is a robustness analysis and does not retune Rule C after inspecting cross-day results. Report retention rate, full-window K-S, worst-15-minute K-S, and IRN contradiction rate. Since semantic ground-truth labels are unavailable, the result supports stability and interpretability, not classification accuracy or universal superiority.
 
+E1 uses the A0 zero-shot simulation outputs as a fixed reference; no audit method triggers calibration or simulation reruns. Every method starts from the same eligible raw real link-key universe on each split. A method's retained real link keys are then applied to the same A0 simulation output before computing its K-S values. Differences in retained keys are therefore an explicit audit-method outcome and must be reported with retention rate; the eligible universe and simulation configuration remain fixed.
+
+IRN consistency is matched at `(route, bound, from_seq, to_seq, one-hour window)` through the frozen link-to-IRN mapping. Unmatched records are excluded from the rate denominator and reported separately.
+
 Also compute a compact Rule C sensitivity grid around the selected point, such as `T in {275, 325, 375}` and `v in {4, 5, 6}`.
 
 ### 7.3 E2: Full Protocol Ablation
@@ -196,6 +208,16 @@ Run these configurations with identical seeds and windows:
 | A4 | Full-RCMDT | Yes | Yes | Yes | Moving-only L2 |
 
 For each configuration, report mean and standard deviation across five seeds for full-window K-S and worst-window K-S on the common clean evaluation population. Cross-day K-S and sample counts are mandatory because the repository contains the required real cross-day inputs. Each configuration must therefore generate the corresponding cross-day simulation output.
+
+Disabled-layer values are fixed:
+
+- Baseline bus parameters are `t_board=2.0 s`, `t_fixed=5.0 s`, `tau=1.0 s`, `sigma=0.5`, `minGap_bus=2.5 m`, `accel=2.6 m/s^2`, and `decel=4.5 m/s^2`.
+- Baseline background values are `capacityFactor=1.0`, `minGap_background=2.5 m`, and `impatience=0.5`.
+- For a given optimization seed, A1, A3, and A4 use the same frozen L1-selected bus parameters.
+- A2, A3, and A4 start L2 from the same background priors and common ensemble perturbation seed schedule.
+- A0 uses both baseline sets; A1 freezes baseline background; A2 freezes baseline bus parameters.
+
+The final table reports the fixed real event count once per split. Simulated event counts vary by seed and are reported as mean plus sample standard deviation in the table footnote; the long-form metrics retain each per-seed count.
 
 The output validator fails when two configurations expected to differ share the relevant component hash, when required output files are absent, or when mandatory metrics are null.
 
