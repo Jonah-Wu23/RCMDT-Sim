@@ -16,7 +16,7 @@ The revision is complete when all of the following conditions hold:
 - Every reviewer comment is addressed through revised text, a corrected definition, a new comparison, or a verified experiment.
 - Every reported number is traceable to a generated CSV field and a recorded experiment configuration.
 - The full ablation uses common inputs, windows, seeds, budgets, and metrics.
-- Rule C is compared with statistical and adaptive alternatives without claiming unsupported global optimality.
+- Rule C is compared with at least one statistical baseline and one training-fitted adaptive baseline without claiming unsupported global optimality.
 - The BO and LHS comparison uses the same simulation budget.
 - The transfer experiment is described as cross-day transfer using the actual dates, December 19 and December 30, 2025.
 - The final DOCX contains consistent equations, symbols, captions, affiliations, and cross-references and renders as a legible six-page PDF.
@@ -105,7 +105,16 @@ Align Equation (2) with `src/calibration/objective.py`. For matched downstream s
 
 `e_i = mean simulated cumulative arrival time at stop i - mean observed cumulative arrival time at stop i`.
 
-The manuscript must define the matching key, reference origin, sample count, route direction, and multi-seed aggregation.
+The executable contract is:
+
+- Filter both sources by the manifest's route and direction.
+- Aggregate observed link travel time by `(route, bound, from_seq, to_seq)` and construct cumulative observed time from sequence 1.
+- For each simulated vehicle, subtract its arrival time at its first matched stop, then average relative arrival time by downstream `to_seq`.
+- Inner-join observed and simulated cumulative times on `(route, bound, to_seq)` and exclude the origin stop.
+- Define `i` as one joined downstream stop and `n` as the number of joined downstream stops.
+- Reject the evaluation when `n < 3`.
+
+One L1 candidate evaluation uses one deterministic SUMO seed derived from `(optimization_seed, evaluation_index)`. BO and continued LHS use the same seed schedule at matching evaluation indices. The paper reports optimization performance across optimization seeds; it does not pool stop errors from different candidates or seeds into one Equation (2) value.
 
 ### 6.4 Observation Audit
 
@@ -135,15 +144,42 @@ Create or consolidate a single paper experiment manifest that records:
 
 Every run writes a manifest copy and a hash of the effective configuration. A comparison script must reject configurations whose expected differences do not appear in the effective SUMO inputs.
 
+The data partitions are fixed as follows:
+
+- **Development split:** December 19, 2025, 17:00-18:00 HKT. Rule C sensitivity is described on this split; IQR/MAD and adaptive baselines are fitted here.
+- **Cross-day test split:** December 30, 2025, 15:00-16:00 HKT. All audit methods and calibrated configurations are frozen before this split is evaluated.
+- There is no separate held-out same-day test in the available repository data. The paper must not describe one.
+
+Metric definitions are fixed:
+
+- `KS-speed` is the two-sample K-S statistic `D`, not its p-value, between real and simulated event-level effective-speed samples on the same frozen link-key set.
+- `KS-TT` is defined identically for event-level travel-time samples and is secondary unless Table I has room.
+- All A0-A4 rows use the same Rule-C-clean real evaluation population. Audit effects on raw versus clean populations are reported separately in Fig. 2. A3 uses raw D2D observations inside L2 but is evaluated against the same clean target as every other configuration.
+- Per-seed metrics are computed first; Table I reports their arithmetic mean and sample standard deviation. Real observations are not duplicated or pooled across seeds.
+- `worst-15-min KS` is the maximum valid K-S statistic over 15-minute half-open windows `[start, start+900 s)` advanced every 60 seconds within the one-hour window.
+- A full-window K-S value requires at least 20 real and 20 simulated events. A subwindow requires at least five events from each source. Missing minima produce a failed metric, not a zero.
+- `retention rate = n_clean_link_keys / n_eligible_raw_link_keys`, where eligibility includes the declared route, direction, time window, and positive distance/travel-time requirements.
+- `IRN contradiction rate` is the proportion of matched D2D link-window records with median effective speed below 5 km/h whose matched IRN median speed is at least 5 km/h. Report its numerator, denominator, and unmatched count; do not treat it as a classification-accuracy measure.
+- P-values may be reported as diagnostic values but cannot replace `D` or be used to label a model as passed/failed in the main comparison.
+
+Two hashes serve different purposes:
+
+- `provenance_hash` covers the complete canonical manifest, input content hashes, software versions, seed, run ID, and schema version.
+- `simulation_effective_hash` covers only canonical sorted JSON for input content hashes, bus parameters, background parameters, observation semantic, simulator settings, and SUMO seed. Timestamps, output paths, and run IDs are excluded.
+
+The validator also records component hashes for `bus_parameters`, `background_parameters`, `observation_semantic`, and `simulator_inputs`. Expected A0-A4 differences are asserted against these component hashes.
+
 ### 7.2 E1: Observation-Rule Comparison
 
-Compare:
+Compare at minimum:
 
 - Fixed Rule C.
-- IQR/MAD-based statistical filtering.
+- MAD-based statistical filtering.
 - Isolation Forest as a data-adaptive baseline.
 
-Use training data for fitting or threshold selection and freeze each method before cross-day evaluation. Report retention rate, full-window K-S, worst-15-minute K-S, and IRN plausibility consistency. Since semantic ground-truth labels are unavailable, the result supports stability and interpretability, not classification accuracy or universal superiority.
+IQR may be included as a second statistical baseline when space and time permit. If Isolation Forest fails because of sample size or implementation instability, replace it with a training-fitted empirical quantile rule using predeclared 95th travel-time and 5th speed percentiles. At least one adaptive baseline must remain.
+
+Fit MAD, Isolation Forest, or the quantile fallback on the development split only. Freeze fitted values and model state before evaluating the cross-day split. Rule C thresholds are predeclared physical defaults; the development sensitivity grid is a robustness analysis and does not retune Rule C after inspecting cross-day results. Report retention rate, full-window K-S, worst-15-minute K-S, and IRN contradiction rate. Since semantic ground-truth labels are unavailable, the result supports stability and interpretability, not classification accuracy or universal superiority.
 
 Also compute a compact Rule C sensitivity grid around the selected point, such as `T in {275, 325, 375}` and `v in {4, 5, 6}`.
 
@@ -153,15 +189,15 @@ Run these configurations with identical seeds and windows:
 
 | ID | Configuration | Audit | L1 BO | L2 IES | Observation semantic |
 |---|---|---:|---:|---:|---|
-| A0 | Zero-shot | No | No | No | Raw evaluation |
-| A1 | BO-only | Fixed by protocol | Yes | No | Audited evaluation |
-| A2 | IES-only | Fixed by protocol | No | Yes | Moving-only L2 |
-| A3 | Raw-RCMDT | No | Yes | Yes | Raw D2D supplied to L2 |
+| A0 | Zero-shot | No calibration-time audit | No | No | No L2 input |
+| A1 | BO-only | Fixed evaluation audit | Yes | No | No L2 input |
+| A2 | IES-only | Fixed evaluation audit | No | Yes | Moving-only L2 |
+| A3 | Raw-RCMDT | No L2 audit | Yes | Yes | Raw D2D supplied to L2 |
 | A4 | Full-RCMDT | Yes | Yes | Yes | Moving-only L2 |
 
-For each configuration, report mean and standard deviation across five seeds for full-window K-S and worst-window K-S. Report cross-day K-S only when both real and simulated transfer inputs exist. Include sample counts.
+For each configuration, report mean and standard deviation across five seeds for full-window K-S and worst-window K-S on the common clean evaluation population. Cross-day K-S and sample counts are mandatory because the repository contains the required real cross-day inputs. Each configuration must therefore generate the corresponding cross-day simulation output.
 
-The output validator fails when two configurations expected to differ share the same effective configuration hash, when required output files are absent, or when metrics are null.
+The output validator fails when two configurations expected to differ share the relevant component hash, when required output files are absent, or when mandatory metrics are null.
 
 ### 7.4 E3: Equal-Budget BO Versus LHS
 
@@ -172,11 +208,11 @@ For each optimization seed:
 - Continued LHS evaluates 25 additional independently sampled candidates.
 - Both methods therefore use 40 simulations.
 
-Report cumulative best objective versus evaluation count, final best objective, and evaluations needed to reach a predeclared target. Use at least three optimization seeds. Retain all 40 evaluations per method; do not compare different budget sizes.
+Report cumulative best objective versus evaluation count, final best objective, and evaluations needed to reach a predeclared target. The normal design uses five optimization seeds. The target is fixed separately for each shared initial design before the additional 25 evaluations as `0.95 * best feasible objective among the 15 shared initial points`; a method that never reaches it is recorded as `not reached`. Retain all 40 evaluations per method; do not compare different budget sizes.
 
 ### 7.5 E4: Cross-Day Transfer
 
-Use December 19, 2025 as the primary calibration/evaluation date and December 30, 2025 as the cross-day transfer date. Rename result fields from `next_day_*` to `cross_day_*`. The paper must state the exact dates and avoid next-day wording.
+Use December 19, 2025 as the development date and December 30, 2025 as the cross-day transfer date. Rename result fields from `next_day_*` to `cross_day_*`. The paper must state the exact dates and avoid next-day wording. Missing cross-day simulation outputs after the retry policy block the full-ablation deliverable; they do not trigger silent omission.
 
 ### 7.6 Optional Baselines
 
@@ -209,9 +245,33 @@ Generates the final Table I and figures from validated CSV files. Figure and tab
 
 Consumes only reporting-layer artifacts. Numbers are inserted from the final generated table and checked against the source CSV before submission.
 
+### 8.6 Interface Schemas
+
+The manifest schema, versioned as `paper-manifest/v1`, requires:
+
+- `schema_version`, `experiment_id`, `config_id`, `method_id`, `seed`.
+- `datasets[]` with path, SHA-256, observation date, timezone, and time window.
+- `routes[]` with route, direction, and link-key selection.
+- `l1` with parameter bounds, objective definition, initial design, budget, and seed schedule.
+- `l2` with state components, priors, bounds, ensemble size, iterations, damping, and observation semantic.
+- `audit` with method, fitted-on split, frozen parameters/model hash, and Rule C conditions when applicable.
+- `simulator` with SUMO version, effective input hashes, seed, and timeout.
+- `outputs` with run directory and required artifact names.
+
+Each run writes `run-status/v1` containing `status` (`pending`, `running`, `succeeded`, `failed`), attempt number, start/end timestamps, exit code, error summary, manifest hashes, and produced artifact hashes.
+
+The long-form metric schema, `paper-metrics/v1`, requires one row per metric and seed:
+
+- `experiment_id`, `config_id`, `method_id`, `seed`, `split`.
+- `metric_name`, `domain` (`speed` or `travel_time`), `value`, `unit`.
+- `n_real`, `n_sim`, `n_link_keys`, `window_start`, `window_end`.
+- `manifest_hash`, `simulation_output_hash`, `evaluator_version`, `status`.
+
+Reporting scripts accept only validated `paper-metrics/v1` rows with `status=succeeded`. Every figure or table writes an `artifact-sidecar/v1` JSON containing source metric hashes, script version, output hash, and manuscript figure/table identifier.
+
 ## 9. Six-Page Manuscript Design
 
-The final paper keeps five figures and one table:
+The target layout keeps five figures and one table:
 
 - **Fig. 1:** revised RCMDT architecture with `theta_bus`, `x_corr`, the audit path, and freeze protocol.
 - **Fig. 2:** merged contamination evidence with raw/clean distribution, Rule C geometry, and trajectory accumulation.
@@ -231,16 +291,45 @@ Text allocation:
 - Conclusion: approximately 150 words.
 - References: approximately 15-17 entries.
 
+Page allocation:
+
+- **Page 1:** title, authors, abstract, Introduction through research gap.
+- **Page 2:** contributions, compressed Related Work, Problem Formulation.
+- **Page 3:** Methodology and Fig. 1.
+- **Page 4:** Experimental Setup, Fig. 2, and the compact Fig. 3.
+- **Page 5:** Table I, Fig. 4, Fig. 5, and principal results.
+- **Page 6:** residual discussion, limitations, conclusion, acknowledgment, and references.
+
+Page overflow is resolved in this order:
+
+1. Remove repeated background and shorten captions without removing definitions.
+2. Merge Fig. 3 into Fig. 2 as a sensitivity/comparison panel, reducing the count to four figures.
+3. Remove the trajectory panel from Fig. 2 while retaining the raw/clean distribution and Rule C geometry.
+4. Replace Fig. 5 with a compact numerical BO-LHS statement or inset when equal-budget evidence remains traceable.
+5. Remove weak or redundant references, especially superseded preprints.
+
+Font size, margins, IEEE template geometry, mandatory ablation, adaptive threshold evidence, and cross-day evidence cannot be reduced to solve overflow.
+
 The revision removes unsupported expressions such as `significantly outperforms`, `confidently shifted`, and `confirms effective generalization`. It reports residual discrepancy when the K-S test still rejects equality.
 
 ## 10. DOCX Editing Workflow
 
-1. Preserve a backup of the authoritative manuscript.
-2. Produce a tracked-change review DOCX using minimal, precise OOXML edits.
-3. Replace figures and Table I while preserving IEEE styles and numbering.
-4. Verify the tracked version through text extraction and PDF rendering.
-5. Produce an accepted-changes camera-ready DOCX and a six-page PDF.
-6. After final verification, update the user-designated authoritative DOCX while retaining the backup and tracked review version.
+Artifacts are stored beside the authoritative manuscript using these exact names:
+
+- Backup: `Operator-Aware Robust Calibration for Bus-Corridor Digital Twins via Bayesian Optimization and Iterative Ensemble Smoothing.original-20260716.docx`
+- Tracked review: `Operator-Aware Robust Calibration for Bus-Corridor Digital Twins via Bayesian Optimization and Iterative Ensemble Smoothing.camera-ready-tracked.docx`
+- Accepted final: `Operator-Aware Robust Calibration for Bus-Corridor Digital Twins via Bayesian Optimization and Iterative Ensemble Smoothing.camera-ready-final.docx`
+- Verification PDF: `Operator-Aware Robust Calibration for Bus-Corridor Digital Twins via Bayesian Optimization and Iterative Ensemble Smoothing.camera-ready-final.pdf`
+
+Workflow:
+
+1. Create the backup once and verify its SHA-256 against the initial authoritative file.
+2. Unpack a working copy and create minimal tracked changes with OOXML `w:del`/`w:ins`, preserving unchanged runs and IEEE styles.
+3. Replace figures and Table I while preserving captions, anchors, numbering, and section properties.
+4. Pack the tracked review artifact and verify it through Pandoc extraction.
+5. Accept revisions in a separate OOXML copy by retaining inserted content, removing deleted content, and clearing revision markup; pack the accepted final artifact.
+6. Render with Microsoft Word in noninteractive mode when available; Word-rendered page count is authoritative. LibreOffice headless rendering is a preflight fallback and cannot alone approve the final six-page layout.
+7. After the accepted final DOCX and Word-rendered PDF pass all checks, copy the accepted final content to the user-designated authoritative DOCX path. Never overwrite the backup or tracked review artifact.
 
 The final visual check covers column balancing above Fig. 1, equation alignment, caption legibility, figure resolution, reference overflow, author affiliations, and removal of template placeholders.
 
@@ -254,6 +343,15 @@ An experiment result is rejected when:
 - Training information leaks into cross-day threshold fitting.
 - The run uses a seed or parameter setting outside the manifest.
 - The reported table cannot be regenerated from the recorded output.
+
+Failure and retry policy:
+
+- Each `(experiment_id, config_id, seed, split)` receives one initial attempt and at most two deterministic retries using the same manifest and seed. Replacement seeds are forbidden.
+- A run timeout is the larger of 30 minutes or three times the median runtime of successful pilot runs; before pilot evidence exists, use 60 minutes.
+- Failed partial outputs are moved to an attempt-specific quarantine directory and never reused by aggregation.
+- After retries, the A0-A4 comparison uses the intersection of successful seeds across every configuration and both splits. Five seeds are the target; three common seeds are the minimum.
+- Fewer than three common seeds, a missing mandatory configuration, or missing cross-day output blocks the full-ablation deliverable and requires a user decision. The manuscript must not substitute unequal seed sets or omit the failed row.
+- BO-LHS uses five seeds normally and may fall back to three common seeds. Fewer than three blocks the BO-LHS evidence and activates the manuscript compression fallback that removes Fig. 5 and limits the claim to the already verified single-run observation.
 
 The manuscript is rejected for submission when:
 
@@ -289,12 +387,36 @@ The manuscript is rejected for submission when:
 When time or validity constraints require scope reduction:
 
 1. Remove DAPPER/ES-MDA from the manuscript.
-2. Reduce the adaptive threshold comparison from Isolation Forest plus IQR/MAD to IQR/MAD only.
-3. Reduce BO-LHS to three seeds while preserving 40 evaluations per method.
+2. Drop the optional IQR baseline. Retain MAD and either Isolation Forest or the predeclared empirical-quantile adaptive fallback.
+3. Reduce BO-LHS from five to three common seeds while preserving 40 evaluations per method.
 4. Retain the full ablation and cross-day transfer; these are mandatory reviewer-response evidence.
 5. Remove any failed experiment rather than reframing it as a favorable result.
 
-## 15. Deliverables
+The degradation policy cannot authorize unequal populations, null transfer metrics, fewer than three common seeds, or omission of a mandatory A0-A4 configuration. Those conditions block the relevant claim and require explicit user direction.
+
+## 15. Reviewer Traceability Matrix
+
+The change log uses these fixed identifiers:
+
+| ID | Reviewer requirement | Required evidence or manuscript change |
+|---|---|---|
+| AE-1 | Resolve reviewer concerns | All rows below completed or explicitly mapped to a verified change |
+| R1-1 | Five streams versus four | Add the fifth BO/simulation-calibration stream or change the count; selected design adds the fifth stream |
+| R1-2 | Define Equation (2) error | Apply Section 6.3 contract in code and manuscript |
+| R1-3 | Align text above Fig. 1 | Word-rendered visual check and balanced columns |
+| R1-4 | Explain GP and candidate | Define training pairs, predictive mean/variance, candidate vector, and `argmax EI` selection |
+| R1-5 | Differentiate novelty | Reframe contribution around audit, scope separation, and freeze protocol; support with A0-A4 |
+| R2-1 | Quantitative and methodological comparison | Common-protocol A0-A4 table; optional external smoother baseline only if valid |
+| R2-2 | Threshold basis and alternatives | E1 sensitivity plus MAD and adaptive baseline |
+| R2-3 | Introduction and literature distinction | Compressed recent literature comparison and explicit gap paragraph |
+| R2-4 | Symbols and formula formatting | Terminology contract, automated obsolete-symbol search, and visual proofread |
+| R3-1 | Clarify fundamental novelty | Same contribution reframing as R1-5 with restrained claims |
+| R3-2 | Simplify dense writing | Reduce Introduction by about 25 percent and shorten Methodology prose |
+| R3-3 | Improve figures and captions | Regenerated figures, self-contained captions, readable labels, and PDF inspection |
+
+Completion requires every identifier to appear once in the final change log with manuscript location, artifact or test reference, and status.
+
+## 16. Deliverables
 
 - Corrected and validated experiment source code.
 - Frozen experiment manifests and final long-form metrics CSV.
@@ -303,4 +425,3 @@ When time or validity constraints require scope reduction:
 - Accepted-changes six-page camera-ready DOCX.
 - Six-page verification PDF.
 - A short change log mapping reviewer comments to manuscript changes.
-
