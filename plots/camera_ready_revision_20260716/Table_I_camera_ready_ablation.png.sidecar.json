@@ -1,0 +1,53 @@
+{
+  "artifact_path": "Table_I_camera_ready_ablation.png",
+  "artifact_sha256": "8d81cc4404d93ea2da988223cb71d47a90168832eb2e03099da718bc27b4dc34",
+  "command": "\"D:\\Documents\\Bus Project\\SMC\\Sorce code\\.venv\\Scripts\\python.exe\" \"D:\\Documents\\Bus Project\\SMC\\Sorce code\\scripts\\plots\\generate_camera_ready_revision_figures.py\" --input-dir data\\camera_ready_revision_20260716 --output-dir plots\\camera_ready_revision_20260716 --overwrite",
+  "figure": {
+    "dpi_x": 299.999,
+    "dpi_y": 299.999,
+    "font_family": "Times New Roman",
+    "format": "PNG",
+    "height_px": 675,
+    "palette": [
+      "#0072B2",
+      "#D55E00",
+      "#009E73",
+      "#56B4E9",
+      "#666666",
+      "#111111"
+    ],
+    "width_px": 2148
+  },
+  "generated_at_utc": "2026-07-16T06:05:55.836529+00:00",
+  "input_schema_versions": {
+    "table_i.csv": "table-i/v1"
+  },
+  "manifest_path": "manifests/effective_manifest.json",
+  "manifest_sha256": "c5c898edf974ed5fcada3444d2b50f28fcacd3768d9998364f4dbec49e592080",
+  "manuscript_artifact_id": "Table_I",
+  "provenance_hash": "ec9e112f8c1cd9af91b00a3e5041c769d6dc609b35303c128afffd9d3db2f7d7",
+  "schema_version": "artifact-sidecar/v1",
+  "script_files": [
+    {
+      "path": "D:/Documents/Bus Project/SMC/Sorce code/scripts/plots/generate_camera_ready_revision_figures.py",
+      "sha256": "5175220742e0d4969ca4fcc7fc21e27c542af5dba678091ef25edd2efe152d3a"
+    },
+    {
+      "path": "D:/Documents/Bus Project/SMC/Sorce code/src/paper_experiments/figures.py",
+      "sha256": "3f5c23d2cff78479ce8a7f446261658235312eb8ed8181b60889cb7ec397a030"
+    }
+  ],
+  "script_sha256": "9ac3dff31433637cc28afd52a137f3e07dba14cab2fcf7202ec159c65ba7b5aa",
+  "source_inputs": [
+    {
+      "bytes": 16541,
+      "path": "manifests/effective_manifest.json",
+      "sha256": "c5c898edf974ed5fcada3444d2b50f28fcacd3768d9998364f4dbec49e592080"
+    },
+    {
+      "bytes": 1605,
+      "path": "tables/table_i.csv",
+      "sha256": "5f2073a25bb9b718312ce18b6b5718e5cac80e7ac300ac384049674ff6fd65da"
+    }
+  ]
+}

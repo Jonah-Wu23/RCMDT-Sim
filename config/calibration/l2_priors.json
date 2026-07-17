@@ -1,6 +1,18 @@
 {
-    "description": "L2 宏观参数先验分布配置 (IES 校准)",
-    "l1_frozen_source": "config/calibration/best_l1_parameters.json",
+    "description": "L2 背景交通参数先验；权威协议为 config/paper_camera_ready_manifest.json",
+    "canonical_manifest": "config/paper_camera_ready_manifest.json",
+    "l1_frozen_source": {
+        "path_pattern": "data/camera_ready_revision_20260716/l1/seed-{seed}/selected.json",
+        "seeds": [0, 1, 2, 3, 4],
+        "selection_field": "selected_for_l2",
+        "method": "BO"
+    },
+    "observation_contract": {
+        "frozen_index": "data/calibration/l2_observation_vector_corridor_M11.csv",
+        "raw_d2d_dimension": 11,
+        "moving_only_dimension": 5,
+        "moving_only_observation_ids": [1, 2, 5, 7, 22]
+    },
     "parameters": [
         {
             "name": "capacityFactor",
@@ -9,8 +21,8 @@
             "min": 0.3,
             "max": 3.0,
             "scope": "global",
-            "sumo_attribute": "net.xml edge capacity scaling",
-            "description": "全网流量瓶颈因子，控制道路通行能力"
+            "sumo_attribute": "SUMO --scale for background demand",
+            "description": "背景交通需求缩放因子"
         },
         {
             "name": "minGap_background",
@@ -34,8 +46,15 @@
         }
     ],
     "ensemble_config": {
-        "ensemble_size": 20,
-        "max_iterations": 5,
-        "observation_noise_std": 10.0
+        "ensemble_size": 10,
+        "max_iterations": 3,
+        "initial_damping": 0.3,
+        "damping_mode": "fixed",
+        "adaptive_damping": false,
+        "localization": null,
+        "observation_noise_std": 10.0,
+        "observation_variance_floor": 1.0,
+        "ensemble_seed_schedule": "10000*seed + 100*iteration",
+        "sumo_seed_schedule": "200000 + 10000*seed + 100*iteration + member"
     }
 }

@@ -1,0 +1,59 @@
+{
+  "artifact_path": "Fig2_camera_ready_contamination.png",
+  "artifact_sha256": "28911248c57dec3ce1815b1d6ca8820d0ad5ab73ba40be2a5edbe3d32e9b3320",
+  "command": "\"D:\\Documents\\Bus Project\\SMC\\Sorce code\\.venv\\Scripts\\python.exe\" \"D:\\Documents\\Bus Project\\SMC\\Sorce code\\scripts\\plots\\generate_camera_ready_revision_figures.py\" --input-dir data\\camera_ready_revision_20260716 --output-dir plots\\camera_ready_revision_20260716 --only fig2 fig3 --overwrite",
+  "figure": {
+    "dpi_x": 299.999,
+    "dpi_y": 299.999,
+    "font_family": "Times New Roman",
+    "format": "PNG",
+    "height_px": 795,
+    "palette": [
+      "#0072B2",
+      "#D55E00",
+      "#009E73",
+      "#56B4E9",
+      "#666666",
+      "#111111"
+    ],
+    "width_px": 2148
+  },
+  "generated_at_utc": "2026-07-16T07:08:48.443361+00:00",
+  "input_schema_versions": {
+    "fig2_contamination.csv": "fig2-contamination/v1",
+    "fig2_trajectory.csv": "fig2-trajectory/v1"
+  },
+  "manifest_path": "manifests/effective_manifest.json",
+  "manifest_sha256": "c5c898edf974ed5fcada3444d2b50f28fcacd3768d9998364f4dbec49e592080",
+  "manuscript_artifact_id": "Fig2",
+  "provenance_hash": "ebfef0248a39c15a703fe247107693fe4bb863289d1b402aabdefe73325cd093",
+  "schema_version": "artifact-sidecar/v1",
+  "script_files": [
+    {
+      "path": "D:/Documents/Bus Project/SMC/Sorce code/scripts/plots/generate_camera_ready_revision_figures.py",
+      "sha256": "5175220742e0d4969ca4fcc7fc21e27c542af5dba678091ef25edd2efe152d3a"
+    },
+    {
+      "path": "D:/Documents/Bus Project/SMC/Sorce code/src/paper_experiments/figures.py",
+      "sha256": "dd63467ddf441d2f400975a2ce87e447dcc57f29e536ecc835ca9db91f86f596"
+    }
+  ],
+  "script_sha256": "e4f64a1e054262243a2b89cf26094ce0a293c450a006030276b293f77d1c9fe6",
+  "source_inputs": [
+    {
+      "bytes": 16541,
+      "path": "manifests/effective_manifest.json",
+      "sha256": "c5c898edf974ed5fcada3444d2b50f28fcacd3768d9998364f4dbec49e592080"
+    },
+    {
+      "bytes": 16711,
+      "path": "reporting/fig2_contamination.csv",
+      "sha256": "5ca808cc7375f1013325fd246e9025c753674fc3b63a0824dba02005d13812de"
+    },
+    {
+      "bytes": 939,
+      "path": "reporting/fig2_trajectory.csv",
+      "sha256": "e249eab28f8d0e885f359ff6dba7f9b4eef44896920f3a49ca5440ca6ec3534c"
+    }
+  ]
+}

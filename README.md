@@ -1,5 +1,7 @@
 # RCMDT: Observation-Operator-Aware Calibration of Mobility Digital Twins
 
+Research-oriented Chinese overview for faculty outreach: `README_research_zh.md`
+
 Codebase for an IEEE SMC 2026 paper on robust calibration of bus corridor digital twins.
 
 ## What This Project Claims

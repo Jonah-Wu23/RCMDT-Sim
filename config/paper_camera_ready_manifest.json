@@ -1,0 +1,378 @@
+{
+  "schema_version": "paper-manifest/v1",
+  "experiment_id": "smc-camera-ready-20260716",
+  "config_id": "paper_protocol",
+  "method_id": "multi_stage",
+  "seed": 0,
+  "timezone": "Asia/Hong_Kong",
+  "datasets": [
+    {
+      "id": "development_stats",
+      "path": "data/processed/link_stats.csv",
+      "sha256": "fde3da7d37ff4983c41ea630466d126be912d804d8d8a17b42d70de282d530ae",
+      "hash_kind": "file",
+      "observation_date": "2025-12-19",
+      "timezone": "Asia/Hong_Kong",
+      "time_window": {"start": "17:00:00", "end": "18:00:00"}
+    },
+    {
+      "id": "development_events",
+      "path": "data/processed/link_speeds.csv",
+      "sha256": "aba7ea65ed75b1af88c2324906b102b4202b6fa0e67f5d30f4d3c30e32b522f6",
+      "hash_kind": "file",
+      "observation_date": "2025-12-19",
+      "timezone": "Asia/Hong_Kong",
+      "time_window": {"start": "17:00:00", "end": "18:00:00"}
+    },
+    {
+      "id": "cross_day_stats",
+      "path": "data2/processed/link_stats_offpeak.csv",
+      "sha256": "d5708a6b059be32c735906d9d17c24c86a810f95d70f5e3a3a0f6e1195cf8a58",
+      "hash_kind": "file",
+      "observation_date": "2025-12-30",
+      "timezone": "Asia/Hong_Kong",
+      "time_window": {"start": "15:00:00", "end": "16:00:00"}
+    },
+    {
+      "id": "cross_day_events",
+      "path": "data2/processed/link_speeds_offpeak.csv",
+      "sha256": "1d8925c67e32ea666349023556169c76c006f2c72ab2850b14d6d50fc6f7d2b3",
+      "hash_kind": "file",
+      "observation_date": "2025-12-30",
+      "timezone": "Asia/Hong_Kong",
+      "time_window": {"start": "15:00:00", "end": "16:00:00"}
+    },
+    {
+      "id": "route_stop_distance",
+      "path": "data/processed/kmb_route_stop_dist.csv",
+      "sha256": "83cd9fb2f66bf36a9bc9f4a00cc08cd4cd4fbab7d8f2b4d9fd525ca795fe7569",
+      "hash_kind": "file",
+      "observation_date": "2025-12-19",
+      "timezone": "Asia/Hong_Kong",
+      "time_window": {"start": "17:00:00", "end": "18:00:00"}
+    },
+    {
+      "id": "development_eta_source",
+      "path": "data/processed/station_eta.csv",
+      "sha256": "b553a6abe6b4592949aed630f91c4e31065ec8c4f7f20262fa8b9580020a24dd",
+      "hash_kind": "file",
+      "observation_date": "2025-12-19",
+      "timezone": "Asia/Hong_Kong",
+      "time_window": {"start": "17:00:00", "end": "18:00:00"}
+    },
+    {
+      "id": "development_l1_events",
+      "path": "data/camera_ready_revision_20260716/observations/l1_hybrid_link_events.csv",
+      "sha256": "ec6ee25ea0c6c359ad372912c47a6e2fcb580a5c42335c523cd520177a9f1bc4",
+      "hash_kind": "file",
+      "schema_version": "l1-hybrid-link-events/v1",
+      "source_semantic": "226 pass-derived events plus 7 explicitly labelled ETA-derived proxy events for missing 68X inbound 2-to-3",
+      "derived_from": ["development_events", "development_eta_source"],
+      "derivation_manifest_id": "development_l1_derivation",
+      "observation_date": "2025-12-19",
+      "timezone": "Asia/Hong_Kong",
+      "time_window": {"start": "17:00:00", "end": "18:00:00"}
+    },
+    {
+      "id": "development_l1_derivation",
+      "path": "data/camera_ready_revision_20260716/observations/l1_hybrid_link_events.manifest.json",
+      "sha256": "5836ce0502491f6b5d9f84c8ee612c8d2479f08f79b432cce7ed1bebd900dbca",
+      "hash_kind": "file",
+      "schema_version": "l1-hybrid-observation-manifest/v1",
+      "observation_date": "2025-12-19",
+      "timezone": "Asia/Hong_Kong",
+      "time_window": {"start": "17:00:00", "end": "18:00:00"}
+    },
+    {
+      "id": "development_irn",
+      "path": "data/raw/irn_download",
+      "sha256": "fa5d2f9bc139865ef931e643af5e7230464867173991157679c994fdcc38620f",
+      "hash_kind": "sha256-tree-v1",
+      "observation_date": "2025-12-19",
+      "timezone": "Asia/Hong_Kong",
+      "time_window": {"start": "17:00:00", "end": "18:00:00"}
+    },
+    {
+      "id": "cross_day_irn",
+      "path": "data2/raw/irn_download",
+      "sha256": "94989ba7ba6c62d6511c31553668a75144b8800d9b8b82693de597ecca493f80",
+      "hash_kind": "sha256-tree-v1",
+      "observation_date": "2025-12-30",
+      "timezone": "Asia/Hong_Kong",
+      "time_window": {"start": "15:00:00", "end": "16:00:00"}
+    }
+  ],
+  "routes": [
+    {
+      "route": "68X",
+      "direction": "inbound",
+      "l1_selected": true,
+      "link_key_selection": "positive travel time and distance; distance <= 1500 m"
+    },
+    {
+      "route": "68X",
+      "direction": "outbound",
+      "l1_selected": false,
+      "link_key_selection": "positive travel time and distance; distance <= 1500 m"
+    },
+    {
+      "route": "960",
+      "direction": "inbound",
+      "l1_selected": true,
+      "link_key_selection": "positive travel time and distance; distance <= 1500 m"
+    },
+    {
+      "route": "960",
+      "direction": "outbound",
+      "l1_selected": false,
+      "link_key_selection": "positive travel time and distance; distance <= 1500 m"
+    }
+  ],
+  "splits": {
+    "development": {
+      "date": "2025-12-19",
+      "window_start_hkt": "17:00:00",
+      "window_end_hkt": "18:00:00"
+    },
+    "cross_day": {
+      "date": "2025-12-30",
+      "window_start_hkt": "15:00:00",
+      "window_end_hkt": "16:00:00"
+    }
+  },
+  "l1": {
+    "parameter_scope": "theta_bus",
+    "parameter_bounds": {
+      "t_board": [0.5, 5.0],
+      "t_fixed": [2.0, 15.0],
+      "tau": [0.1, 2.0],
+      "sigma": [0.1, 0.8],
+      "minGap_bus": [0.1, 5.0],
+      "accel": [0.5, 3.0],
+      "decel": [1.0, 5.0]
+    },
+    "objective_definition": {
+      "route": "68X",
+      "observation_dataset_id": "development_l1_events",
+      "observation_derivation_manifest_id": "development_l1_derivation",
+      "formula": "RMSE(e)+MAE(e)+0.5*std(abs(e))+0.3*Q0.9(abs(e))",
+      "constraint_route": "960",
+      "constraint_rmse_max_s": 350.0,
+      "constraint_penalty": "2000+10*(RMSE_960-350)",
+      "minimum_joined_downstream_stops": 3
+    },
+    "initial_design": {
+      "method": "LatinHypercube",
+      "shared_evaluations": 15
+    },
+    "budget": {
+      "successful_evaluations_per_method": 40,
+      "subsequent_evaluations": 25,
+      "bo_acquisition": "expected_improvement",
+      "bo_candidate_pool": 16384
+    },
+    "optimization_seeds": [0, 1, 2, 3, 4],
+    "seed_schedule": {
+      "optimization_seeds": [0, 1, 2, 3, 4],
+      "sumo_seed_formula": "100000 + 1000*optimization_seed + evaluation_index"
+    },
+    "observation_augmentation": {
+      "method": "targeted_eta_gap_fill",
+      "base_dataset_id": "development_events",
+      "eta_dataset_id": "development_eta_source",
+      "preserve_all_base_events": true,
+      "gap_links": [
+        {
+          "route": "68X",
+          "bound": "inbound",
+          "service_type": 1,
+          "from_seq": 2,
+          "to_seq": 3
+        }
+      ],
+      "timestamp_window_policy": "capture, upstream ETA, and downstream ETA all inside the half-open development window",
+      "scheduled_bus_policy": "exclude when either endpoint rmk_en contains Scheduled Bus",
+      "rank_semantic": "eta_seq is stop-local; used only for the explicitly declared missing adjacent link",
+      "supplement_semantic": "ETA-derived proxy; not a vehicle-identified observed pass"
+    },
+    "bus_parameters": {
+      "t_board": 2.0,
+      "t_fixed": 5.0,
+      "tau": 1.0,
+      "sigma": 0.5,
+      "minGap_bus": 2.5,
+      "accel": 2.6,
+      "decel": 4.5
+    },
+    "target_definition": "0.95 * best feasible objective among the 15 shared initial points",
+    "infrastructure_retries": 2
+  },
+  "l2": {
+    "state_name": "x_corr",
+    "state_components": ["capacityFactor", "minGap_background", "impatience"],
+    "priors": {
+      "capacityFactor": {"mean": 1.5, "std": 0.8, "bounds": [0.3, 3.0]},
+      "minGap_background": {"mean": 2.5, "std": 0.5, "bounds": [0.5, 5.0]},
+      "impatience": {"mean": 0.5, "std": 0.2, "bounds": [0.0, 1.0]}
+    },
+    "bounds": {
+      "capacityFactor": [0.3, 3.0],
+      "minGap_background": [0.5, 5.0],
+      "impatience": [0.0, 1.0]
+    },
+    "ensemble_size": 10,
+    "iterations": 3,
+    "damping": 0.3,
+    "observation_variance_floor": 1.0,
+    "ensemble_seed_schedule": "10000*seed + 100*iteration",
+    "sumo_seed_schedule": "200000 + 10000*seed + 100*iteration + member",
+    "observation_semantic": "moving_only",
+    "observation_semantics": ["moving_only", "raw_d2d"],
+    "background_parameters": {
+      "capacityFactor": 1.0,
+      "minGap_background": 2.5,
+      "impatience": 0.5
+    }
+  },
+  "audit": {
+    "method": "rule_c",
+    "fitted_on_split": "development",
+    "frozen_parameters": {
+      "travel_time_gt_s": 325.0,
+      "speed_lt_kmh": 5.0,
+      "distance_lte_m": 1500.0
+    },
+    "conditions": {
+      "travel_time_gt_s": 325.0,
+      "speed_lt_kmh": 5.0,
+      "distance_lte_m": 1500.0
+    },
+    "rule_c": {
+      "travel_time_operator": ">",
+      "travel_time_s": 325.0,
+      "speed_operator": "<",
+      "speed_kmh": 5.0,
+      "distance_operator": "<=",
+      "distance_m": 1500.0
+    },
+    "methods": {
+      "rule_c": {"fitted": false},
+      "mad": {"threshold": 3.5, "scale_factor": 1.4826, "zero_mad_iqr_divisor": 1.349},
+      "isolation_forest": {
+        "n_estimators": 200,
+        "max_samples": "auto",
+        "contamination": "auto",
+        "random_state": 42
+      },
+      "quantile_fallback": {"travel_time_quantile": 0.95, "speed_quantile": 0.05, "method": "linear"}
+    },
+    "sensitivity_grid": {
+      "travel_time_s": [275.0, 325.0, 375.0],
+      "speed_kmh": [4.0, 5.0, 6.0]
+    }
+  },
+  "ablation": {
+    "seeds": [0, 1, 2, 3, 4],
+    "sumo_seed_schedule": "300000 + 1000*seed + split_index; development=0, cross_day=1",
+    "baseline_bus_parameters": {
+      "t_board": 2.0,
+      "t_fixed": 5.0,
+      "tau": 1.0,
+      "sigma": 0.5,
+      "minGap_bus": 2.5,
+      "accel": 2.6,
+      "decel": 4.5
+    },
+    "baseline_background_parameters": {
+      "capacityFactor": 1.0,
+      "minGap_background": 2.5,
+      "impatience": 0.5
+    },
+    "mechanism_matrix": {
+      "A0": {"l1_enabled": false, "l2_enabled": false, "observation_semantic": "no_l2_input"},
+      "A1": {"l1_enabled": true, "l2_enabled": false, "observation_semantic": "no_l2_input"},
+      "A2": {"l1_enabled": false, "l2_enabled": true, "observation_semantic": "moving_only"},
+      "A3": {"l1_enabled": true, "l2_enabled": true, "observation_semantic": "raw_d2d"},
+      "A4": {"l1_enabled": true, "l2_enabled": true, "observation_semantic": "moving_only"}
+    }
+  },
+  "evaluation": {
+    "full_window_min_samples_per_source": 20,
+    "subwindow_duration_s": 900,
+    "subwindow_step_s": 60,
+    "subwindow_min_samples_per_source": 5,
+    "event_windows_are_half_open": true,
+    "common_evaluation_population": "rule_c_clean",
+    "common_seed_target": 5,
+    "common_seed_minimum": 3
+  },
+  "execution": {
+    "authorized_max_cpu_workers": 8,
+    "authorization_date": "2026-07-16",
+    "pilot_runtime_s": 31.487021499982802,
+    "post_pilot_timeout_s": 1800,
+    "max_attempts_per_run": 3
+  },
+  "simulator": {
+    "name": "SUMO",
+    "sumo_version": "1.20.0",
+    "version": "1.20.0",
+    "network": {"path": "sumo/net/hk_cropped.net.xml", "sha256": "7ccca864f98c291ff8567d4f69be17ad8aac23cf75d568b2103dc27b728b7968"},
+    "bus_routes": {"path": "sumo/routes/fixed_routes_cropped.rou.xml", "sha256": "02b2f838d25d3c4770f0471511d2e7e24df39bc64bd0341d534e910ed93702e7"},
+    "development_background_routes": {"path": "sumo/routes/background_cropped.rou.xml", "sha256": "ce64ea95866fa9f51963dbff99e56b95405842dbff573da1671aa00a041cfc81"},
+    "cross_day_background_routes": {"path": "sumo/routes/background_offpeak.rou.xml", "sha256": "327bd6065c61d77f9562f1659e0f037928f0a205d4ce210227c0ac9ececa0069"},
+    "bus_stops": {"path": "sumo/additional/bus_stops_cropped.add.xml", "sha256": "b18f3f698931778c308569976f3d9667d957a3e2ceccf8cbb6742c3643cc7042"},
+    "bus_stop_weights": {"path": "config/calibration/bus_stop_weights.json", "sha256": "bbc1433b3f0db3837828f3d92b78e03a4847841a5b46fe12564b6e6379643c5a"},
+    "link_to_irn_mapping": {"path": "config/calibration/link_edge_mapping.csv", "sha256": "019c2c9ca124befd76ed2ebd943c8544cebd990513f7051ff7e16c1fb891a033"},
+    "observation_index": {"path": "data/calibration/l2_observation_vector.csv", "sha256": "e32cb91baaed54a99f185cde92d2f920f32c64ebce0ea0e7e5a0256bbb740094"},
+    "m11_mapping": {"path": "config/calibration/link_edge_mapping_corridor_M11.csv", "sha256": "f34d1fa904f5de8413b9ebf7774efa27243df2788c22646c07ea57d9c7b83094"},
+    "m11_observation_index": {"path": "data/calibration/l2_observation_vector_corridor_M11.csv", "sha256": "0cb92d18c7d1a533e16cd8a94648cfc92055459fe239fe554dac9b56fea1428b"},
+    "effective_input_hashes": {
+      "network": "7ccca864f98c291ff8567d4f69be17ad8aac23cf75d568b2103dc27b728b7968",
+      "bus_routes": "02b2f838d25d3c4770f0471511d2e7e24df39bc64bd0341d534e910ed93702e7",
+      "development_background_routes": "ce64ea95866fa9f51963dbff99e56b95405842dbff573da1671aa00a041cfc81",
+      "cross_day_background_routes": "327bd6065c61d77f9562f1659e0f037928f0a205d4ce210227c0ac9ececa0069",
+      "bus_stops": "b18f3f698931778c308569976f3d9667d957a3e2ceccf8cbb6742c3643cc7042",
+      "bus_stop_weights": "bbc1433b3f0db3837828f3d92b78e03a4847841a5b46fe12564b6e6379643c5a",
+      "link_to_irn_mapping": "019c2c9ca124befd76ed2ebd943c8544cebd990513f7051ff7e16c1fb891a033",
+      "observation_index": "e32cb91baaed54a99f185cde92d2f920f32c64ebce0ea0e7e5a0256bbb740094",
+      "m11_mapping": "f34d1fa904f5de8413b9ebf7774efa27243df2788c22646c07ea57d9c7b83094",
+      "m11_observation_index": "0cb92d18c7d1a533e16cd8a94648cfc92055459fe239fe554dac9b56fea1428b"
+    },
+    "settings": {
+      "begin_s": 0,
+      "end_s": 3900,
+      "ignore_route_errors": true,
+      "time_to_teleport_s": 300,
+      "verbose": false,
+      "no_step_log": true,
+      "no_warnings": true,
+      "background_scale_parameter": "capacityFactor"
+    },
+    "seed": 0,
+    "timeout_seconds": 3600,
+    "timeout_before_pilot_s": 3600,
+    "max_attempts": 3,
+    "simulation_end_s": 3900
+  },
+  "outputs": {
+    "run_directory": "data/camera_ready_revision_20260716",
+    "required_artifacts": [
+      "manifests/effective_manifest.json",
+      "environment/environment.json",
+      "audit/audit_metrics.csv",
+      "audit/audit_manifest.json",
+      "l1/bo_lhs_evaluations.csv",
+      "l1/bo_lhs_summary.csv",
+      "ablation/ablation_runs.csv",
+      "metrics/paper_metrics.csv",
+      "tables/table_i.csv"
+    ],
+    "plot_directory": "plots/camera_ready_revision_20260716",
+    "schema_versions": {
+      "run_status": "run-status/v1",
+      "metrics": "paper-metrics/v1",
+      "artifact_sidecar": "artifact-sidecar/v1"
+    }
+  }
+}

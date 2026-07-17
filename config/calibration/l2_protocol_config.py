@@ -5,13 +5,15 @@ l2_protocol_config.py
 =====================
 L2 口径统一配置文件
 
-论文定义:
-- 状态向量: x ∈ R³ = [capacityFactor, minGap, impatience]
-- 观测向量: y ∈ R¹¹ = M11走廊 11条link 的 moving (traffic-only) 均速
+相机就绪实验定义（权威值来自 config/paper_camera_ready_manifest.json）:
+- 状态向量: x_corr ∈ R³ = [capacityFactor, minGap_background, impatience]
+- 观测向量: raw_d2d 为 11 维；Rule C moving_only 为 5 维
 - IES设置: Ne=10, K=3, damping β=0.3
-- Rule C: T*=325s, v*=5km/h (跨线路/窗口固定)
+- 五个优化种子: 0, 1, 2, 3, 4
+- 固定阻尼，无自适应阻尼和局部化
+- Rule C: T>325s, v<5km/h, distance<=1500m (跨线路/窗口固定)
 
-所有实验必须复用此配置以保证口径一致性。
+本文件保留旧脚本的导入接口；相机就绪执行器直接读取权威 manifest。
 
 Author: RCMDT Project
 Date: 2026-01-11
@@ -29,19 +31,21 @@ import numpy as np
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 # =============================================================================
-# 观测向量配置 (y ∈ R¹¹)
+# 观测向量配置（raw_d2d 11维，moving_only 5维）
 # =============================================================================
 
 @dataclass
 class ObservationVectorConfig:
     """M11走廊观测向量配置"""
-    name: str = "y_M11_moving"
-    description: str = "M11走廊 11条link 的 moving (traffic-only) 均速"
+    name: str = "y_M11_raw_and_moving"
+    description: str = "M11走廊 raw_d2d 11维与 Rule C moving_only 5维均速"
     dimension: int = 11
+    raw_dimension: int = 11
+    moving_dimension: int = 5
     
     # 数据文件路径
     data_file: Path = field(default_factory=lambda: 
-        PROJECT_ROOT / "data" / "calibration" / "l2_observation_vector_corridor_M11_moving_irn.csv")
+        PROJECT_ROOT / "data" / "calibration" / "l2_observation_vector_corridor_M11.csv")
     
     # link 定义 (10条68X + 1条960)
     links: List[Dict] = field(default_factory=lambda: [
@@ -58,8 +62,10 @@ class ObservationVectorConfig:
         {"id": 22, "route": "960", "bound": "inbound", "from_seq": 1, "to_seq": 2},
     ])
     
-    # 语义
-    semantic: str = "moving"  # traffic-only, 排除运营停站
+    # 相机就绪消融使用同一冻结索引生成两种语义。
+    semantic: str = "raw_d2d"
+    semantics: tuple[str, str] = ("raw_d2d", "moving_only")
+    moving_observation_ids: tuple[int, ...] = (1, 2, 5, 7, 22)
 
 
 # =============================================================================
@@ -77,14 +83,14 @@ class StateVectorConfig:
     components: List[Dict] = field(default_factory=lambda: [
         {
             "name": "capacityFactor",
-            "description": "路段通行能力因子",
-            "bounds": [0.5, 3.0],
+            "description": "背景交通需求缩放因子（SUMO --scale）",
+            "bounds": [0.3, 3.0],
             "unit": "-",
-            "prior_mean": 1.0,
-            "prior_std": 0.3
+            "prior_mean": 1.5,
+            "prior_std": 0.8
         },
         {
-            "name": "minGap",
+            "name": "minGap_background",
             "description": "最小跟车间距 (背景车辆)",
             "bounds": [0.5, 5.0],
             "unit": "meters",
@@ -127,10 +133,13 @@ class IESConfig:
     obs_error_source: str = "empirical"
     variance_floor: float = 1.0  # (km/h)²
     
-    # 局部化
-    localization: Optional[str] = "Patch-wise (L=16)"
+    # 相机就绪协议使用固定阻尼，不启用局部化。
+    localization: Optional[str] = None
     nugget_ratio: float = 0.05
-    adaptive_damping: bool = True
+    adaptive_damping: bool = False
+    optimization_seeds: tuple[int, ...] = (0, 1, 2, 3, 4)
+    ensemble_seed_schedule: str = "10000*seed + 100*iteration"
+    sumo_seed_schedule: str = "200000 + 10000*seed + 100*iteration + member"
 
 
 # =============================================================================
@@ -144,7 +153,7 @@ class RuleCConfig:
     speed_kmh: float = 5.0       # v* = 5 km/h
     max_dist_m: float = 1500.0   # 仅对短距离link生效
     
-    description: str = "T*=325s, v*=5km/h (跨线路/窗口固定)"
+    description: str = "T>325s, v<5km/h, distance<=1500m (跨线路/窗口固定)"
 
 
 # =============================================================================
@@ -212,9 +221,10 @@ class L2ProtocolConfig:
         return f"""
 L2 Protocol Config v{self.version}
 ================================
-观测向量: y ∈ R^{self.observation.dimension} ({self.observation.description})
+观测向量: raw_d2d={self.observation.raw_dimension}维, moving_only={self.observation.moving_dimension}维
 状态向量: x ∈ R^{self.state.dimension} ({self.state.description})
 IES: Ne={self.ies.ensemble_size}, K={self.ies.max_iterations}, β={self.ies.damping}
+种子: {self.ies.optimization_seeds}
 Rule C: {self.rule_c.description}
 场景: {self.default_scenario.name} ({self.default_scenario.hkt_time})
 """
@@ -236,7 +246,7 @@ RULE_C_CONFIG = L2_CONFIG.rule_c
 # =============================================================================
 
 def load_observation_vector() -> np.ndarray:
-    """加载 M11 走廊观测向量 (11维均速)"""
+    """加载冻结的 raw_d2d 11维索引值；相机就绪执行器会从事件重新聚合。"""
     import pandas as pd
     
     obs_file = OBSERVATION_CONFIG.data_file

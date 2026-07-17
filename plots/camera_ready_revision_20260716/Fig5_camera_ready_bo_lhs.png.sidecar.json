@@ -1,0 +1,53 @@
+{
+  "artifact_path": "Fig5_camera_ready_bo_lhs.png",
+  "artifact_sha256": "f517d266ef53348662411e9682c59582caae14458becc99ffa099a1ae42b3185",
+  "command": "\"D:\\Documents\\Bus Project\\SMC\\Sorce code\\.venv\\Scripts\\python.exe\" \"D:\\Documents\\Bus Project\\SMC\\Sorce code\\scripts\\plots\\generate_camera_ready_revision_figures.py\" --input-dir data\\camera_ready_revision_20260716 --output-dir plots\\camera_ready_revision_20260716 --overwrite",
+  "figure": {
+    "dpi_x": 299.999,
+    "dpi_y": 299.999,
+    "font_family": "Times New Roman",
+    "format": "PNG",
+    "height_px": 840,
+    "palette": [
+      "#0072B2",
+      "#D55E00",
+      "#009E73",
+      "#56B4E9",
+      "#666666",
+      "#111111"
+    ],
+    "width_px": 1050
+  },
+  "generated_at_utc": "2026-07-16T06:05:55.644097+00:00",
+  "input_schema_versions": {
+    "bo_lhs_evaluations.csv": "bo-lhs-evaluations/v1"
+  },
+  "manifest_path": "manifests/effective_manifest.json",
+  "manifest_sha256": "c5c898edf974ed5fcada3444d2b50f28fcacd3768d9998364f4dbec49e592080",
+  "manuscript_artifact_id": "Fig5",
+  "provenance_hash": "e7c29b6d25cc2daf87c6501c3b263ff4354739595d41af3fc2b9b265ecdda3be",
+  "schema_version": "artifact-sidecar/v1",
+  "script_files": [
+    {
+      "path": "D:/Documents/Bus Project/SMC/Sorce code/scripts/plots/generate_camera_ready_revision_figures.py",
+      "sha256": "5175220742e0d4969ca4fcc7fc21e27c542af5dba678091ef25edd2efe152d3a"
+    },
+    {
+      "path": "D:/Documents/Bus Project/SMC/Sorce code/src/paper_experiments/figures.py",
+      "sha256": "3f5c23d2cff78479ce8a7f446261658235312eb8ed8181b60889cb7ec397a030"
+    }
+  ],
+  "script_sha256": "9ac3dff31433637cc28afd52a137f3e07dba14cab2fcf7202ec159c65ba7b5aa",
+  "source_inputs": [
+    {
+      "bytes": 48117,
+      "path": "l1/bo_lhs_evaluations.csv",
+      "sha256": "f09af10c905c287c670e8cc410c04942853aad9d29165a5cb43087120babdc13"
+    },
+    {
+      "bytes": 16541,
+      "path": "manifests/effective_manifest.json",
+      "sha256": "c5c898edf974ed5fcada3444d2b50f28fcacd3768d9998364f4dbec49e592080"
+    }
+  ]
+}

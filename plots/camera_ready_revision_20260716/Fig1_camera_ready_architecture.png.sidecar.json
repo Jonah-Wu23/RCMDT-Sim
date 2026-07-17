@@ -1,0 +1,48 @@
+{
+  "artifact_path": "Fig1_camera_ready_architecture.png",
+  "artifact_sha256": "5edfd0cdffb34f47971d744f4bded740795ca907e1892be614f4479d45ca4e9b",
+  "command": "\"D:\\Documents\\Bus Project\\SMC\\Sorce code\\.venv\\Scripts\\python.exe\" \"D:\\Documents\\Bus Project\\SMC\\Sorce code\\scripts\\plots\\generate_camera_ready_revision_figures.py\" --input-dir data\\camera_ready_revision_20260716 --output-dir plots\\camera_ready_revision_20260716 --overwrite",
+  "figure": {
+    "dpi_x": 299.999,
+    "dpi_y": 299.999,
+    "font_family": "Times New Roman",
+    "format": "PNG",
+    "height_px": 825,
+    "palette": [
+      "#0072B2",
+      "#D55E00",
+      "#009E73",
+      "#56B4E9",
+      "#666666",
+      "#111111"
+    ],
+    "width_px": 2148
+  },
+  "generated_at_utc": "2026-07-16T06:05:54.393329+00:00",
+  "input_schema_versions": {
+    "effective_manifest.json": "paper-manifest/v1"
+  },
+  "manifest_path": "manifests/effective_manifest.json",
+  "manifest_sha256": "c5c898edf974ed5fcada3444d2b50f28fcacd3768d9998364f4dbec49e592080",
+  "manuscript_artifact_id": "Fig1",
+  "provenance_hash": "7a63486c3d8753f5d5e83dce99943d5fe404434bbec6fab8a646c9c14f862267",
+  "schema_version": "artifact-sidecar/v1",
+  "script_files": [
+    {
+      "path": "D:/Documents/Bus Project/SMC/Sorce code/scripts/plots/generate_camera_ready_revision_figures.py",
+      "sha256": "5175220742e0d4969ca4fcc7fc21e27c542af5dba678091ef25edd2efe152d3a"
+    },
+    {
+      "path": "D:/Documents/Bus Project/SMC/Sorce code/src/paper_experiments/figures.py",
+      "sha256": "3f5c23d2cff78479ce8a7f446261658235312eb8ed8181b60889cb7ec397a030"
+    }
+  ],
+  "script_sha256": "9ac3dff31433637cc28afd52a137f3e07dba14cab2fcf7202ec159c65ba7b5aa",
+  "source_inputs": [
+    {
+      "bytes": 16541,
+      "path": "manifests/effective_manifest.json",
+      "sha256": "c5c898edf974ed5fcada3444d2b50f28fcacd3768d9998364f4dbec49e592080"
+    }
+  ]
+}
